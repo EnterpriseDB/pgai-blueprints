@@ -1,0 +1,86 @@
+Fraud Detection Rule: US-STRIPE-001
+Rule Name: US High-Value Transaction Limit
+Region: United States (US)
+Payment Vendor: Stripe
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors high-value transactions processed through Stripe in the United States to detect potential fraud. Transactions exceeding the threshold amount require additional review.
+
+RULE PARAMETERS
+- Threshold Amount: $5,000.00 USD
+- Risk Score Threshold: 0.70
+- Action: Review (manual or automated review required)
+- Category: Transaction Limit
+
+RULE DESCRIPTION
+Any single transaction processed through Stripe originating from a US-based customer or merchant that exceeds $5,000 must undergo enhanced fraud detection screening. This includes:
+
+1. Customer verification - Confirm customer identity and account standing
+2. Transaction history analysis - Review past transaction patterns
+3. Merchant verification - Validate merchant legitimacy and category
+4. Geographic consistency - Verify transaction location matches customer profile
+
+TRIGGERING CONDITIONS
+A transaction triggers this rule when ALL of the following are true:
+- Payment vendor is Stripe
+- Transaction region is United States
+- Transaction amount is greater than or equal to $5,000.00
+- Calculated fraud score is 0.70 or higher
+
+FRAUD INDICATORS
+- Sudden increase in transaction amount compared to customer history
+- First-time high-value transaction from new customer
+- Multiple failed payment attempts before successful transaction
+- Mismatched billing and shipping addresses
+- Use of anonymizing services or VPN connections
+- High-risk merchant category (crypto, gambling, gift cards)
+
+REVIEW PROCESS
+When this rule is triggered:
+1. Transaction is held for review (not automatically declined)
+2. Customer may be contacted for verification
+3. Additional authentication may be required
+4. Review must be completed within 2 hours during business hours
+5. Escalate to senior fraud analyst if fraud score exceeds 0.85
+
+EXAMPLES
+
+Example 1 - Legitimate Transaction:
+- Customer: Established account, 3 years history
+- Amount: $5,200 purchase of electronics from Best Buy
+- Pattern: Consistent with previous high-value purchases
+- Result: Approve after quick review
+
+Example 2 - Suspicious Transaction:
+- Customer: New account, created 2 days ago
+- Amount: $8,500 purchase from "Crypto Exchange XYZ"
+- Pattern: First transaction, no history
+- IP: Using VPN, location mismatch
+- Result: Hold for enhanced verification, contact customer
+
+Example 3 - Fraudulent Transaction:
+- Customer: Account shows signs of takeover
+- Amount: $6,000 gift card purchase
+- Pattern: Unusual for customer profile
+- Failed attempts: 3 declined cards before success
+- Result: Block transaction, freeze account, contact legitimate owner
+
+RELATED RULES
+- US-STRIPE-002: US Rapid Transaction Velocity
+- GLOBAL-001: Global High-Value Transaction Review
+- GLOBAL-002: Global Crypto Exchange Monitoring
+
+COMPLIANCE NOTES
+This rule helps comply with:
+- Bank Secrecy Act (BSA) requirements
+- FinCEN reporting obligations for suspicious activity
+- Stripe's terms of service for fraud prevention
+- PCI DSS requirements for transaction monitoring
+
+PERFORMANCE METRICS
+Target metrics for this rule:
+- False Positive Rate: < 5%
+- Detection Rate: > 90% for actual fraud
+- Average Review Time: < 30 minutes
+- Customer Impact: Minimal friction for legitimate customers

@@ -1,0 +1,45 @@
+{
+  "customers": [
+    {"customer_id": 1, "name": "Alice Morgan", "email": "alice@example.com", "city": "New York"},
+    {"customer_id": 2, "name": "Bob Chen", "email": "bob@example.com", "city": "San Francisco"},
+    {"customer_id": 3, "name": "Carol Davis", "email": "carol@example.com", "city": "Chicago"},
+    {"customer_id": 4, "name": "Dan Patel", "email": "dan@example.com", "city": "Austin"},
+    {"customer_id": 5, "name": "Eve Santos", "email": "eve@example.com", "city": "Seattle"}
+  ],
+  "products": [
+    {"product_id": 101, "name": "Laptop Pro 15", "category": "Electronics", "price": 1299.99},
+    {"product_id": 102, "name": "Wireless Mouse", "category": "Accessories", "price": 29.99},
+    {"product_id": 103, "name": "USB-C Hub", "category": "Accessories", "price": 49.99},
+    {"product_id": 104, "name": "Monitor 27in", "category": "Electronics", "price": 449.99},
+    {"product_id": 105, "name": "Keyboard MX", "category": "Accessories", "price": 89.99},
+    {"product_id": 106, "name": "Webcam HD", "category": "Accessories", "price": 69.99},
+    {"product_id": 107, "name": "Standing Desk", "category": "Furniture", "price": 599.99},
+    {"product_id": 108, "name": "Desk Lamp", "category": "Furniture", "price": 39.99}
+  ],
+  "orders": [
+    {"order_id": 1001, "customer_id": 1, "order_date": "2024-01-15", "status": "delivered", "total": 1379.97},
+    {"order_id": 1002, "customer_id": 2, "order_date": "2024-01-18", "status": "delivered", "total": 519.98},
+    {"order_id": 1003, "customer_id": 1, "order_date": "2024-02-01", "status": "shipped", "total": 89.99},
+    {"order_id": 1004, "customer_id": 3, "order_date": "2024-02-10", "status": "delivered", "total": 1749.98},
+    {"order_id": 1005, "customer_id": 4, "order_date": "2024-02-15", "status": "processing", "total": 639.98},
+    {"order_id": 1006, "customer_id": 5, "order_date": "2024-03-01", "status": "delivered", "total": 149.97},
+    {"order_id": 1007, "customer_id": 2, "order_date": "2024-03-10", "status": "shipped", "total": 449.99},
+    {"order_id": 1008, "customer_id": 3, "order_date": "2024-03-15", "status": "delivered", "total": 29.99}
+  ],
+  "order_items": [
+    {"item_id": 1, "order_id": 1001, "product_id": 101, "quantity": 1, "price": 1299.99},
+    {"item_id": 2, "order_id": 1001, "product_id": 102, "quantity": 1, "price": 29.99},
+    {"item_id": 3, "order_id": 1001, "product_id": 103, "quantity": 1, "price": 49.99},
+    {"item_id": 4, "order_id": 1002, "product_id": 104, "quantity": 1, "price": 449.99},
+    {"item_id": 5, "order_id": 1002, "product_id": 106, "quantity": 1, "price": 69.99},
+    {"item_id": 6, "order_id": 1003, "product_id": 105, "quantity": 1, "price": 89.99},
+    {"item_id": 7, "order_id": 1004, "product_id": 101, "quantity": 1, "price": 1299.99},
+    {"item_id": 8, "order_id": 1004, "product_id": 104, "quantity": 1, "price": 449.99},
+    {"item_id": 9, "order_id": 1005, "product_id": 107, "quantity": 1, "price": 599.99},
+    {"item_id": 10, "order_id": 1005, "product_id": 108, "quantity": 1, "price": 39.99},
+    {"item_id": 11, "order_id": 1006, "product_id": 102, "quantity": 2, "price": 29.99},
+    {"item_id": 12, "order_id": 1006, "product_id": 105, "quantity": 1, "price": 89.99},
+    {"item_id": 13, "order_id": 1007, "product_id": 104, "quantity": 1, "price": 449.99},
+    {"item_id": 14, "order_id": 1008, "product_id": 102, "quantity": 1, "price": 29.99}
+  ]
+}

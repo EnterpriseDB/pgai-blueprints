@@ -1,0 +1,341 @@
+Fraud Detection Rule: UK-STRIPE-001
+Rule Name: UK Transaction Limit
+Region: United Kingdom (UK)
+Payment Vendor: Stripe
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors Stripe transactions originating from or processed in the United Kingdom, with thresholds and procedures adapted for UK regulatory requirements, consumer protection laws, and fraud patterns specific to the UK market.
+
+RULE PARAMETERS
+- Threshold Amount: £3,500 GBP (approximately $4,350 USD)
+- Risk Score Threshold: 0.75
+- Action: Review (mandatory review before processing)
+- Category: Transaction Limit
+- Regulatory Framework: UK Financial Conduct Authority (FCA) guidelines
+
+RULE DESCRIPTION
+UK consumers and merchants benefit from strong consumer protection laws including Section 75 of the Consumer Credit Act and chargeback rights. This rule ensures compliance with UK regulations while detecting fraud patterns common in the UK market.
+
+UK-SPECIFIC CONSIDERATIONS
+
+REGULATORY ENVIRONMENT:
+- Financial Conduct Authority (FCA) oversight
+- Strong Customer Authentication (SCA) requirements under PSD2
+- Consumer Credit Act Section 75 protection (£100-£30,000)
+- Payment Services Regulations 2017
+- Data Protection Act 2018 and UK GDPR
+
+STRONG CUSTOMER AUTHENTICATION (SCA):
+Transactions over £30 typically require SCA unless exempt:
+- Two-factor authentication required
+- Exceptions: low-risk transactions, recurring payments, trusted beneficiaries
+- This rule monitors for SCA bypass attempts
+
+CURRENCY CONSIDERATIONS:
+- Primary currency: GBP (£)
+- Conversion to EUR for EU transactions
+- Dynamic currency conversion monitoring
+- Brexit impact on EU payment processing
+
+TRIGGERING CONDITIONS
+Transaction triggers this rule when:
+1. Amount ≥ £3,500 GBP
+2. Transaction involves UK card or UK merchant
+3. Fraud risk score ≥ 0.75
+4. SCA was not completed or was challenged
+
+FRAUD PATTERNS SPECIFIC TO UK
+
+1. AUTHORISED PUSH PAYMENT (APP) FRAUD:
+UK-specific fraud type where victim is tricked into authorizing payment:
+- Impersonation of banks or authorities
+- Invoice fraud targeting businesses
+- Romance scams
+- Investment scams (especially crypto)
+- Purchase scams on social media/marketplaces
+
+Example:
+- Customer receives call claiming to be from "Barclays Fraud Department"
+- Instructed to move money to "safe account"
+- Transfers £5,000 via Stripe payment to fraudster
+- Risk Score: 0.85 → BLOCK and verify with customer
+
+2. COURIER FRAUD:
+- Scammer calls claiming suspicious activity on card
+- Requests customer "verify" identity by making test payment
+- Or sends courier to collect card
+- Common in UK, less so elsewhere
+
+3. TV LICENSE SCAMS:
+- Phishing emails about TV License renewal
+- Links to fake payment pages
+- Typical amounts: £150-£200
+- Monitor for merchants impersonating TV Licensing
+
+4. HMRC TAX SCAMS:
+- Fake tax bills or refund offers
+- Threatening immediate legal action
+- Request for payment via unusual methods
+- Amounts: £500-£5,000 typically
+
+5. ENERGY BILL SCAMS:
+- Fake energy company payment requests
+- Especially common during energy crisis
+- Pressure tactics for immediate payment
+- Amounts: £300-£2,000
+
+MERCHANT CATEGORIES - UK FOCUS
+
+HIGH-RISK UK CATEGORIES:
+- Online gambling (must have UK Gambling Commission license)
+- Binary options and high-risk investments
+- Used car sales platforms
+- Holiday lettings and travel (post-Brexit complications)
+- Cryptocurrency platforms (FCA registration required)
+
+PROTECTED MERCHANT CATEGORIES:
+UK regulations provide extra protection for:
+- Regulated financial services
+- Licensed gambling operators
+- Authorized payment institutions
+- Registered charities
+
+REVIEW PROCEDURES
+
+TIER 1 REVIEW (£3,500 - £9,999):
+1. Verify SCA completion
+2. Check customer identity against Credit Reference Agencies (Experian, Equifax, TransUnion)
+3. Confirm merchant is legitimate and properly registered
+4. Review transaction context and customer journey
+5. Check against known scam patterns
+6. Verify address using Royal Mail Postcode Address File
+7. Review time: 20-30 minutes
+
+TIER 2 REVIEW (£10,000 - £29,999):
+- All Tier 1 checks PLUS:
+- Companies House registration verification (for business purchases)
+- Enhanced due diligence on merchant
+- Bank account verification via Open Banking
+- Consider triggering Section 75 documentation
+- Senior analyst approval required
+- Review time: 30-60 minutes
+
+TIER 3 REVIEW (£30,000+):
+- All Tier 1 and 2 checks PLUS:
+- Fraud manager approval mandatory
+- Source of funds verification
+- Possible Money Laundering Report (MLR) to National Crime Agency
+- Legal review for high-value asset purchases
+- Review time: 1-4 hours
+
+EXAMPLES
+
+Example 1 - Legitimate High-Value Purchase (APPROVE):
+Customer: Sarah Thompson, London
+Transaction: £4,200 purchase from John Lewis (appliances)
+Payment Method: Credit card with SCA completed
+History: 8-year Stripe customer, previous purchases similar category
+Verification: Address confirmed, customer contacted and verified
+Risk Score: 0.55
+Action: APPROVE after 15-minute review
+
+Example 2 - APP Fraud Attempt (BLOCK):
+Customer: David Williams, Manchester
+Transaction: £6,500 payment to "Bank Security Solutions Ltd"
+Red Flags:
+- Company not registered at Companies House
+- Customer claims "bank told me to transfer money"
+- Urgent/pressure tactics evident
+- New merchant, no web presence
+Risk Score: 0.92
+Action: BLOCK immediately, contact customer, report to Action Fraud
+
+Example 3 - Invoice Fraud (BLOCK):
+Customer: Small business in Birmingham
+Transaction: £8,000 payment to "regular supplier"
+Red Flags:
+- Email address domain slightly different (.co.uk vs .com)
+- Bank account details changed
+- Urgency in payment request
+- Different account name
+Risk Score: 0.88
+Action: HOLD payment, contact customer via known phone number, verify with actual supplier
+
+Example 4 - Crypto Investment Scam (BLOCK):
+Customer: Retired person in Scotland
+Transaction: £12,000 to "UK Crypto Investments Ltd"
+Red Flags:
+- Company not FCA-registered (required for crypto)
+- Promises of guaranteed returns
+- Pressure to invest quickly
+- Customer has no prior crypto transactions
+Risk Score: 0.95
+Action: BLOCK, educate customer, report to FCA
+
+STRONG CUSTOMER AUTHENTICATION (SCA) COMPLIANCE
+
+SCA REQUIRED FOR:
+- Remote transactions over £30
+- First transaction with new merchant
+- Adding new card to digital wallet
+- Changes to payment amount or recipient
+
+SCA EXEMPTIONS:
+- Low-risk transactions (determined by fraud history)
+- Transactions under £30
+- Recurring payments (subscriptions)
+- Trusted beneficiaries (previously verified)
+- Corporate payment instruments
+- Contactless under £100 (since October 2021)
+
+This rule monitors for:
+- Attempts to bypass SCA
+- Fraudulent use of exemptions
+- SCA failure patterns indicating compromised cards
+- Merchant SCA implementation compliance
+
+CROSS-BORDER TRANSACTIONS
+
+POST-BREXIT CONSIDERATIONS:
+- UK-EU transactions now treated as international
+- Additional verification for EU sellers
+- VAT and customs implications
+- Slower processing times may be normal
+- Currency conversion monitoring
+
+HIGH-RISK COUNTRIES for UK:
+- Countries on FATF blacklist
+- Sanctioned nations
+- High fraud rate countries (Nigeria, Ukraine, Russia as of 2024)
+- Non-regulated gambling jurisdictions
+
+INTEGRATION WITH UK SYSTEMS
+
+OPEN BANKING (PSD2):
+- Account verification via API
+- Real-time balance checks
+- Payment initiation services
+- Transaction history analysis
+
+CONFIRMATION OF PAYEE (CoP):
+- Verify account name matches
+- Prevent APP fraud
+- Mandatory for many UK banks
+- Integrate with Stripe payments
+
+CREDIT REFERENCE AGENCIES:
+- Experian, Equifax, TransUnion UK
+- Identity verification
+- Fraud markers and CIFAS data
+- Address history verification
+
+ACTION FRAUD INTEGRATION:
+- Report suspected fraud to City of London Police
+- Reference number for investigations
+- Victim support resources
+- Fraud pattern intelligence sharing
+
+CUSTOMER PROTECTION
+
+SECTION 75 CONSUMER CREDIT ACT:
+For purchases £100-£30,000 on credit card:
+- Joint liability with merchant
+- Customer can claim refund from card issuer
+- This rule documents compliance evidence
+
+CHARGEBACK RIGHTS:
+- 120 days for Visa/Mastercard disputes
+- Merchant must provide compelling evidence
+- Transaction documentation critical
+
+FINANCIAL OMBUDSMAN SERVICE (FOS):
+- Free dispute resolution for consumers
+- Banks must respond to complaints
+- This rule ensures proper documentation for potential FOS cases
+
+VULNERABLE CUSTOMERS
+
+UK REGULATIONS require extra care for:
+- Elderly customers (common fraud targets)
+- Customers with mental health conditions
+- Language barriers
+- Financial difficulty
+
+Enhanced verification procedures:
+- Additional authentication steps
+- Third-party verification (authorized representative)
+- Extra time for decision-making
+- Clear explanations of transaction
+
+COMPLIANCE REPORTING
+
+REQUIRED REPORTS:
+- Suspicious Activity Reports (SARs) to National Crime Agency
+- FCA reporting for regulated activities
+- Data breach notifications to ICO
+- Money Laundering reporting
+- Action Fraud case submissions
+
+GDPR COMPLIANCE:
+- Customer data processed lawfully
+- Right to access fraud detection data
+- Data retention limits (7 years typical)
+- Privacy notices clearly displayed
+
+MERCHANT OBLIGATIONS
+
+UK STRIPE MERCHANTS MUST:
+- Register with appropriate authorities (FCA, Gambling Commission, etc.)
+- Implement SCA properly
+- Display terms and conditions clearly
+- Provide clear refund policies
+- Respond to chargeback requests promptly
+- Maintain PCI DSS compliance
+
+FAILURE TO COMPLY:
+- Increased chargeback liability
+- Higher transaction fees
+- Account suspension risk
+- Regulatory penalties
+
+PERFORMANCE METRICS
+Target metrics for UK market:
+- APP Fraud Detection Rate: > 80%
+- False Positive Rate: < 12%
+- SCA Compliance Rate: 99%+
+- Customer Satisfaction: High (minimal friction)
+- Average Review Time: < 25 minutes
+- Chargeback Rate: < 0.8%
+
+SEASONAL PATTERNS
+
+HOLIDAY FRAUD SPIKES:
+- Black Friday / Cyber Monday (November)
+- Christmas shopping (December)
+- January sales (returns fraud)
+- Summer holidays (travel fraud)
+
+TAX DEADLINES:
+- Self-assessment deadline (January 31)
+- HMRC scam spike December-January
+
+MAJOR EVENTS:
+- Football transfer window (fake ticket scams)
+- Glastonbury / festival season (ticket fraud)
+- Royal events (commemorative scam products)
+
+RELATED RULES
+- GLOBAL-001: High-value global threshold (£10,000+)
+- UK-PAYPAL-001: Cross-vendor UK protection
+- UK SCA compliance rules (separate system)
+- APP fraud prevention (UK-specific system)
+
+TRAINING REQUIREMENTS
+UK fraud analysts must complete:
+- FCA regulations training
+- APP fraud identification
+- SCA and PSD2 requirements
+- UK consumer protection laws
+- Vulnerable customer handling
+- Cultural awareness for diverse UK population

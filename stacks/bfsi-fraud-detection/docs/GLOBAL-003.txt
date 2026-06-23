@@ -1,0 +1,538 @@
+Fraud Detection Rule: GLOBAL-003
+Rule Name: Global Gambling Transaction Alert
+Region: GLOBAL (All Regions)
+Payment Vendor: All Vendors
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors gambling and gaming transactions across all regions and payment vendors due to the high fraud risk, regulatory complexity, problem gambling concerns, and money laundering potential associated with online and in-person gambling services.
+
+RULE PARAMETERS
+- Threshold Amount: $2,000.00 USD (or equivalent)
+- Risk Score Threshold: 0.70
+- Action: Alert (flag for review, monitor patterns)
+- Category: High-Risk Merchant Category
+- Regulatory Focus: Gambling regulations, responsible gaming, AML compliance
+
+RULE DESCRIPTION
+Gambling transactions require special monitoring because:
+1. High fraud rates in online gambling industry
+2. Complex and varying regulatory requirements by jurisdiction
+3. Money laundering risk (placement and layering stages)
+4. Problem gambling and customer protection obligations
+5. Underage gambling prevention
+6. Unlicensed and illegal operators
+7. Bonus abuse and arbitrage fraud
+8. Chargeback fraud ("friendly fraud")
+
+GAMBLING CATEGORIES COVERED
+
+ONLINE CASINOS:
+- Slots, table games (blackjack, roulette, poker)
+- Live dealer games
+- Progressive jackpot games
+- Virtual sports
+
+SPORTS BETTING:
+- Pre-match betting
+- Live/in-play betting
+- Fantasy sports
+- Esports betting
+
+POKER ROOMS:
+- Cash games
+- Tournaments
+- Sit & Go games
+
+BINGO AND LOTTERY:
+- Online bingo halls
+- Lottery ticket sales
+- Scratch cards
+- Number games
+
+DAILY FANTASY SPORTS (DFS):
+- Season-long fantasy
+- Daily/weekly contests
+- Different regulations than traditional gambling in some jurisdictions
+
+EMERGING CATEGORIES:
+- Social casino games (often not technically gambling but monitored)
+- Skill-based gaming
+- Crypto gambling sites
+- Metaverse casinos
+
+TRIGGERING CONDITIONS
+
+This rule triggers when ALL of the following are true:
+1. Merchant identified as gambling operator
+2. Transaction amount ≥ $2,000 USD equivalent
+3. Calculated risk score ≥ 0.70
+
+OR when ANY of these special conditions occur:
+4. Pattern of rapidly increasing deposits (problem gambling indicator)
+5. Underage customer attempting gambling transaction
+6. Transaction to unlicensed operator in regulated market
+7. Customer on self-exclusion list
+8. Suspicious velocity pattern indicating money laundering
+
+MERCHANT IDENTIFICATION:
+Gambling operators identified by:
+- Merchant Category Code (MCC): 7995 (Betting, including Lottery Tickets, Casino Gaming Chips, Off-track Betting, and Wagers at Race Tracks)
+- Known gambling domains/brands
+- Merchant name keywords: "casino", "bet", "gaming", "poker", "sportsbook"
+- Self-reported category: gambling/gaming
+
+RISK SCORE CALCULATION
+
+BASE GAMBLING RISK: 0.40
+All gambling transactions start with elevated baseline risk
+
+LICENSING AND REGULATION (+0.00 to +0.40):
+- Unlicensed in customer's jurisdiction: +0.40
+- License unknown/unverifiable: +0.30
+- Licensed but in offshore jurisdiction: +0.15
+- No clear regulatory oversight: +0.25
+- Licensed in reputable jurisdiction (UK, Malta, Gibraltar): +0.05
+
+CUSTOMER INDICATORS (+0.00 to +0.30):
+- First gambling transaction: +0.10
+- Underage (< 21 in US, < 18 elsewhere): +0.50 (AUTOMATIC BLOCK)
+- On self-exclusion list: +0.50 (AUTOMATIC BLOCK)
+- Rapid increase in deposit amounts: +0.20
+- No gambling history, suddenly large amount: +0.25
+- Problem gambling indicators from past behavior: +0.15
+
+TRANSACTION PATTERN (+0.00 to +0.30):
+- Unusual time (late night/early morning): +0.10
+- Rapid succession of deposits: +0.20
+- Round numbers suggesting money laundering: +0.15
+- Multiple payment methods in short time: +0.15
+- Failed attempts followed by success: +0.10
+- Amount exceeds responsible gaming limits: +0.20
+
+DEVICE AND LOCATION (+0.00 to +0.20):
+- VPN or proxy usage: +0.20
+- Location in jurisdiction where gambling is illegal: +0.30
+- New device never seen before: +0.10
+- Multiple accounts from same device: +0.20
+- GPS location doesn't match claimed jurisdiction: +0.25
+
+Example Risk Calculation:
+- Base gambling risk: 0.40
+- Unlicensed in customer's jurisdiction: +0.40
+- First gambling transaction: +0.10
+- VPN usage: +0.20
+- Total: 1.10 → BLOCK TRANSACTION
+
+FRAUD SCENARIOS SPECIFIC TO GAMBLING
+
+SCENARIO 1: UNDERAGE GAMBLING
+Description: Minor attempts to gamble using parent's payment method or fake ID.
+
+Indicators:
+- Age verification failure
+- Account registration with inconsistent information
+- Use of parent/guardian payment methods
+- Social media presence indicating age under limit
+- Behavioral patterns typical of younger users
+
+Example:
+- Account: "John Smith" registered age 24
+- Transaction: $500 deposit to online casino
+- Red Flags: Payment card in different name (parent), social media shows age 17
+- Risk Score: 1.0+ (age violation)
+- Action: BLOCK, return funds, report account to operator for closure, consider reporting to parents
+
+SCENARIO 2: PROBLEM GAMBLING
+Description: Customer showing signs of gambling addiction with escalating deposits.
+
+Pattern Recognition:
+- Increasing deposit frequency (daily → hourly)
+- Increasing deposit amounts ($100 → $500 → $2,000)
+- Late night/early morning gambling sessions
+- Rapid deposit-loss-redeposit cycles
+- Multiple failed payment attempts (credit limit reached)
+- Customer borrowing or using credit advances
+
+Example Timeline:
+- Week 1: Three deposits of $100-$200
+- Week 2: Daily deposits of $300-$500
+- Week 3: Multiple daily deposits, amounts up to $1,000
+- Week 4: Deposit of $5,000 at 3 AM, multiple failed attempts first
+- Risk Score: 0.85
+- Action: HOLD transaction, offer responsible gaming resources, suggest deposit limits, contact customer
+
+SCENARIO 3: MONEY LAUNDERING - PLACEMENT
+Description: Criminals deposit illicit funds into gambling sites to legitimize them.
+
+Pattern:
+- Large initial deposit
+- Minimal gambling activity (small bets to appear legitimate)
+- Quick withdrawal request
+- Pattern repeats across multiple sites
+- Use of e-wallets to obscure origin
+
+Example:
+- Customer deposits $10,000
+- Places bets totaling only $500 over 2 days
+- Requests withdrawal of $9,400
+- Net loss only $100 (minimal "cost" to launder)
+- Risk Score: 0.90
+- Action: HOLD withdrawal, enhanced due diligence, source of funds verification, possible SAR filing
+
+SCENARIO 4: BONUS ABUSE / ARBITRAGE
+Description: Professional gamblers or fraud rings exploit welcome bonuses and promotions.
+
+Tactics:
+- Create multiple accounts for multiple bonuses
+- Use different identities (stolen or synthetic)
+- Arbitrage betting (bet both sides of event)
+- Bonus hunting across many sites
+- Violate terms of service systematically
+
+Example:
+- Multiple accounts from same device/IP
+- Each account claims maximum welcome bonus
+- Systematic betting patterns across accounts
+- Attempts to withdraw bonus funds quickly
+- Risk Score: 0.75
+- Action: Flag accounts, share information with gambling operator, potential account closure
+
+SCENARIO 5: CHARGEBACK FRAUD
+Description: Customer gambles, loses money, then disputes charges with bank.
+
+Pattern:
+- Legitimate gambling transaction
+- Customer loses money
+- Customer files chargeback claiming "unauthorized" or "didn't receive services"
+- May claim account was hacked
+- Pattern of gambling followed by chargebacks
+
+Example:
+- Customer deposits $3,000, loses it gambling
+- Two weeks later files chargeback: "unauthorized transaction"
+- Investigation shows customer logged in normally, placed bets willingly
+- This is third gambling chargeback from customer in 12 months
+- Risk Score: 0.80
+- Action: Deny chargeback with evidence, flag customer for future gambling transactions
+
+SCENARIO 6: ACCOUNT TAKEOVER
+Description: Criminal gains access to legitimate customer's account and gambling balance.
+
+Indicators:
+- Login from new device/location
+- Immediate withdrawal attempt after access
+- Change of account details (email, phone, withdrawal method)
+- Unusual betting patterns for the customer
+- Customer reports unauthorized access
+
+Example:
+- Account normally accessed from London, UK
+- Sudden login from Romania
+- Attempt to withdraw $4,500 balance to new e-wallet
+- Customer has not logged in or placed bets
+- Risk Score: 0.95
+- Action: BLOCK withdrawal, freeze account, contact legitimate customer, investigate
+
+REGULATORY COMPLIANCE BY JURISDICTION
+
+UNITED STATES:
+- Varies by state (some allow online, many don't)
+- Interstate Wire Act restrictions
+- Unlawful Internet Gambling Enforcement Act (UIGEA)
+- State lottery exceptions
+- Tribal gaming compacts
+- Daily Fantasy Sports (DFS) different regulations
+
+Legal States (as of 2024):
+- Online casino: NJ, PA, MI, WV, DE, CT
+- Sports betting: 30+ states
+- DFS: Most states except a few
+
+UNITED KINGDOM:
+- Gambling Commission licensing required
+- Strict advertising regulations
+- Mandatory self-exclusion program (GAMSTOP)
+- Stake limits for online slots (£2 before 2019, now £5)
+- Age verification required (18+)
+- Responsible gambling obligations
+
+EUROPEAN UNION:
+- Each member state regulates independently
+- Some have liberal licensing (Malta, Gibraltar)
+- Others have strict monopolies (Finland, Sweden historically)
+- Cross-border provision allowed with local license
+- MGA (Malta Gaming Authority) is common license
+
+AUSTRALIA:
+- Interactive Gambling Act 2001
+- Online casino games prohibited for Australians
+- Sports betting allowed
+- Strict advertising regulations
+- National Self-Exclusion Register
+
+CANADA:
+- Each province regulates independently
+- Most provinces have crown corporation monopolies
+- Some private online operators serve Canadians (gray market)
+- Single-event sports betting legalized 2021
+
+ASIA:
+- Highly restricted in most countries
+- China: Illegal except government lottery and Macau
+- Japan: Limited (pachinko, lottery, some sports)
+- Philippines: PAGCOR regulates, many offshore operators
+- India: Varies by state, games of skill vs. chance distinction
+
+LICENSED JURISDICTIONS (Reputable):
+- United Kingdom (Gambling Commission)
+- Malta (Malta Gaming Authority)
+- Gibraltar (Gibraltar Gambling Commissioner)
+- Alderney (Alderney Gambling Control Commission)
+- Isle of Man (Gambling Supervision Commission)
+- Kahnawake (Canada, Kahnawake Gaming Commission)
+- Curacao (Curacao eGaming)
+- State-level in US (Nevada, New Jersey, etc.)
+
+UNLICENSED / RISKY JURISDICTIONS:
+- Unregulated offshore sites
+- Operators with unclear licensing
+- Sites targeting jurisdictions where they're not licensed
+- "Bitcoin casinos" with no clear regulation
+- Sites that don't perform KYC/age verification
+
+RESPONSIBLE GAMING FEATURES
+
+MANDATORY SAFEGUARDS:
+This rule enforces responsible gaming by monitoring for:
+
+DEPOSIT LIMITS:
+- Daily, weekly, or monthly limits
+- Defaults for new customers
+- Customer can lower anytime, increase only after cooling-off period
+- Transaction exceeding set limit should be blocked
+
+TIME LIMITS:
+- Session time limits
+- Mandatory breaks after extended play
+- Reality checks (notifications of time spent)
+
+LOSS LIMITS:
+- Maximum loss amounts per period
+- Calculated net loss (deposits minus withdrawals)
+- Consider wins/losses, not just deposits
+
+SELF-EXCLUSION:
+- Customer can voluntarily exclude for period (6 months, 1 year, permanent)
+- Check against self-exclusion databases (GAMSTOP in UK, state registries in US)
+- Multi-operator exclusion programs
+- Cooling-off periods (24 hours to 6 weeks)
+
+AGE VERIFICATION:
+- Verify age before allowing gambling
+- 18+ in most jurisdictions, 21+ in US
+- Identity document verification
+- Database checks
+- Credit reference age verification
+
+PROBLEM GAMBLING INDICATORS:
+This rule detects warning signs:
+- Chasing losses (rapid redeposits after losses)
+- Escalating bet sizes
+- Increasing frequency of play
+- Late night/early morning sessions
+- Multiple failed payment attempts
+- Customer distress or complaints
+- Use of credit card cash advances
+
+INTERVENTION ACTIONS:
+When problem gambling detected:
+1. Display responsible gaming messages
+2. Offer deposit/loss/time limits
+3. Provide access to support organizations (GamCare, National Council on Problem Gambling)
+4. Suggest self-exclusion
+5. Cool-off period enforcement
+6. Contact customer with support resources
+
+ANTI-MONEY LAUNDERING (AML)
+
+GAMBLING-SPECIFIC AML RISKS:
+Gambling is attractive for money laundering because:
+- High cash flow environment
+- Can "explain" sudden wealth ("I won")
+- Mixing of funds obscures origin
+- International transfers common
+- E-wallets and crypto add anonymity layers
+
+AML RED FLAGS:
+1. Large deposit, minimal play, quick withdrawal
+2. Unusual betting patterns (both sides of outcome)
+3. Structuring deposits below reporting thresholds
+4. Multiple accounts, coordinated activity
+5. High-value transactions with no apparent employment income
+6. Politically Exposed Person (PEP) without declared source of funds
+7. Transactions from/to high-risk countries
+
+AML PROCEDURES:
+- Enhanced Due Diligence (EDD) for high-value customers
+- Source of funds verification for large deposits
+- Source of wealth verification for VIPs
+- Ongoing transaction monitoring
+- Regular review of customer risk profiles
+- Suspicious Activity Report (SAR) filing when appropriate
+
+TRANSACTION MONITORING:
+This rule integrates with AML systems to:
+- Aggregate transactions across payment methods
+- Calculate net deposits vs. withdrawals
+- Monitor win/loss ratios (unusual wins may indicate collusion)
+- Track fund movements in and out
+- Identify related accounts or coordinated activity
+
+CUSTOMER DUE DILIGENCE (CDD):
+Required for gambling operators:
+- Identity verification (government ID)
+- Address verification (utility bill, bank statement)
+- Date of birth verification (age check)
+- Payment method verification (card ownership, bank account)
+- Enhanced due diligence for high-value customers
+
+EXAMPLES OF RULE APPLICATION
+
+Example 1 - Legitimate High Roller (ALLOW with monitoring):
+Customer: Verified high-income professional
+History: Regular gambling over 2 years, responsible patterns
+Transaction: $8,000 deposit to licensed UK casino (Bet365)
+Verification: Income documented, source of funds clear
+Pattern: Consistent with past behavior, no problem gambling signs
+Risk Score: 0.55
+Action: ALLOW, continue monitoring for changes in pattern
+
+Example 2 - Problem Gambling Intervention (HOLD):
+Customer: Shows escalating deposit pattern
+Timeline: Started $100/week, now $2,000/day
+Transaction: $5,000 deposit at 4 AM after multiple failed attempts
+Indicators: Chasing losses, credit card advances, distress evident
+Risk Score: 0.88
+Action: HOLD transaction, contact customer, offer responsible gaming resources, suggest self-exclusion
+
+Example 3 - Underage Gambling (BLOCK):
+Customer: Account registered as age 22
+Transaction: $1,000 deposit to online casino
+Red Flag: Social media investigation shows customer is 16
+Risk Score: 1.0 (automatic for age violation)
+Action: BLOCK all transactions, close account, return funds to payment source, report to operator
+
+Example 4 - Unlicensed Operator (BLOCK):
+Customer: From New York state
+Transaction: $3,000 to unlicensed offshore casino
+Jurisdiction: Online casino gambling illegal in NY (except licensed operators)
+Operator: No license in any recognized jurisdiction
+Risk Score: 0.95
+Action: BLOCK transaction, warn customer about unlicensed operators, educate about risks
+
+Example 5 - Money Laundering Suspected (HOLD):
+Customer: New account, minimal history
+Transaction: $15,000 deposit
+Activity: Bets only $300 over 3 days, requests withdrawal of $14,650
+Pattern: Consistent with placement/layering
+Risk Score: 0.92
+Action: HOLD withdrawal, enhanced due diligence, source of funds verification, possible SAR filing
+
+Example 6 - Bonus Abuse (FLAG):
+Pattern: 8 accounts from same device
+Activity: Each claims maximum welcome bonus ($500)
+Betting: Systematic arbitrage across accounts
+Risk Score: 0.78
+Action: FLAG all accounts, inform gambling operator, likely account closures and bonus forfeitures
+
+INTEGRATION WITH GAMBLING OPERATORS
+
+OPERATOR RESPONSIBILITIES:
+Licensed gambling operators must:
+- Implement robust age verification
+- Provide self-exclusion mechanisms
+- Monitor for problem gambling
+- Perform AML/KYC compliance
+- Respond to regulatory audits
+- Maintain audit logs
+- Protect customer funds (segregated accounts)
+
+PAYMENT PROCESSOR RESPONSIBILITIES:
+This rule helps payment processors:
+- Comply with UIGEA (US) and similar laws
+- Avoid processing for unlicensed operators
+- Detect and prevent underage gambling
+- Support responsible gaming initiatives
+- Identify money laundering risks
+- Reduce chargeback fraud
+
+DATA SHARING:
+Where legally permitted:
+- Share self-exclusion lists across operators
+- Industry fraud databases (bonus abusers, chargebackers)
+- Regulatory reporting (problem gambling statistics, AML reports)
+- Age verification services
+- Identity verification services
+
+CUSTOMER COMMUNICATION
+
+When blocking gambling transaction:
+
+UNDERAGE BLOCK:
+"This transaction cannot be processed as our verification indicates you may not meet the minimum age requirement for gambling. If you believe this is an error, please contact customer support with valid age verification documentation."
+
+PROBLEM GAMBLING INTERVENTION:
+"We've noticed changes in your gambling activity that may indicate a problem. For your protection, we're holding this transaction and offering resources to help:
+- National Council on Problem Gambling: 1-800-522-4700
+- GamCare (UK): 0808 8020 133
+- Consider setting deposit limits or self-exclusion."
+
+UNLICENSED OPERATOR WARNING:
+"This gambling operator is not licensed in your jurisdiction. Transactions to unlicensed operators carry risks including:
+- No regulatory protection
+- Difficulty withdrawing winnings
+- Potential legal issues
+- No responsible gaming safeguards
+We recommend using licensed operators only."
+
+MONEY LAUNDERING HOLD:
+"For regulatory compliance, we need additional information about this transaction. Please contact our verification team to complete enhanced due diligence. This may include source of funds documentation."
+
+PERFORMANCE METRICS
+
+TARGET METRICS:
+- Underage Gambling Prevention: 100% (zero tolerance)
+- Problem Gambling Intervention Rate: > 60% of high-risk patterns
+- Money Laundering Detection: > 70% of suspicious patterns
+- False Positive Rate: < 15% (accept higher for customer protection)
+- Chargeback Fraud Prevention: > 50%
+- Unlicensed Operator Blocks: 95%+
+- Response Time: < 1 hour for reviews
+
+MEASURED OUTCOMES:
+- Number of problem gambling interventions
+- Self-exclusion conversions (customers who accept help)
+- Prevented underage gambling transactions
+- SARs filed for money laundering
+- Regulatory compliance audit results
+- Customer complaints about blocked legitimate transactions
+
+TRAINING REQUIREMENTS
+
+Fraud analysts handling gambling alerts must complete:
+- Gambling regulations by jurisdiction (quarterly updates)
+- Responsible gaming best practices
+- Problem gambling recognition
+- AML in gambling context
+- Age verification techniques
+- Cultural sensitivity for international customers
+- Addiction support resources and referral procedures
+
+RELATED RULES
+- GLOBAL-001: High-value transactions (overlap at $10K+)
+- GLOBAL-002: Crypto gambling (often involves crypto exchanges)
+- Regional ATO rules: Account takeovers may target gambling accounts
+- Velocity rules: Rapid deposits may indicate problem gambling or money laundering
+
+This comprehensive rule balances enabling legitimate gambling activity with robust protections for vulnerable customers, minors, and society against the unique risks of the gambling industry.

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" font-family="-apple-system, BlinkMacSystemFont, sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#222"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1000" height="620" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="500" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#111">BFSI Fraud Detection — Stack Architecture</text>
+  <text x="500" y="62" text-anchor="middle" font-size="13" fill="#555">OLTP captures &#183; CDC streams &#183; OLAP analyses &#183; ML scores back to OLTP</text>
+
+  <!-- ── Layer 1: OLTP ─────────────────────────────────────────── -->
+  <rect x="60" y="90" width="880" height="84" rx="6" fill="#fafafa" stroke="#222" stroke-width="1.5"/>
+  <text x="80" y="113" font-size="11" font-weight="700" fill="#666" letter-spacing="0.8">OLTP &#183; SYSTEM OF RECORD &#183; USE CASE 1</text>
+
+  <rect x="280" y="125" width="170" height="40" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="365" y="142" text-anchor="middle" font-size="13" font-weight="600" fill="#111">Bank App</text>
+  <text x="365" y="156" text-anchor="middle" font-size="10" fill="#555">Flask UI &#183; writes txns</text>
+
+  <line x1="450" y1="145" x2="488" y2="145" stroke="#222" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="488" y="120" width="220" height="50" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="598" y="139" text-anchor="middle" font-size="13" font-weight="600" fill="#111">EDB PGD</text>
+  <text x="598" y="154" text-anchor="middle" font-size="10" fill="#555">multi-master Postgres</text>
+  <text x="598" y="165" text-anchor="middle" font-size="10" fill="#555">WAL &#183; logical decode</text>
+
+  <!-- OLTP → CDC arrow -->
+  <line x1="598" y1="174" x2="598" y2="208" stroke="#222" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="608" y="194" font-size="10" fill="#555">change events</text>
+
+  <!-- ── Layer 2: CDC ──────────────────────────────────────────── -->
+  <rect x="60" y="214" width="880" height="78" rx="6" fill="#fafafa" stroke="#222" stroke-width="1.5"/>
+  <text x="80" y="237" font-size="11" font-weight="700" fill="#666" letter-spacing="0.8">CDC &#183; DECODE &#8594; EVENT BUS</text>
+
+  <rect x="380" y="246" width="160" height="36" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="460" y="261" text-anchor="middle" font-size="12" font-weight="600" fill="#111">Debezium</text>
+  <text x="460" y="275" text-anchor="middle" font-size="10" fill="#555">connector reads WAL</text>
+
+  <line x1="540" y1="264" x2="578" y2="264" stroke="#222" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="578" y="246" width="138" height="36" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="647" y="261" text-anchor="middle" font-size="12" font-weight="600" fill="#111">Kafka</text>
+  <text x="647" y="275" text-anchor="middle" font-size="10" fill="#555">topic per table</text>
+
+  <!-- Kafka → OLAP fan-out -->
+  <line x1="647" y1="282" x2="647" y2="320" stroke="#222" stroke-width="1.5"/>
+  <line x1="200" y1="320" x2="800" y2="320" stroke="#222" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="200" y1="320" x2="200" y2="338" stroke="#222" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#ar)"/>
+  <line x1="500" y1="320" x2="500" y2="338" stroke="#222" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#ar)"/>
+  <line x1="800" y1="320" x2="800" y2="338" stroke="#222" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#ar)"/>
+
+  <!-- ── Layer 3: OLAP ─────────────────────────────────────────── -->
+  <rect x="60" y="344" width="880" height="120" rx="6" fill="#fafafa" stroke="#222" stroke-width="1.5"/>
+  <text x="80" y="367" font-size="11" font-weight="700" fill="#666" letter-spacing="0.8">OLAP &#183; COLUMNAR + STREAMING &#183; USE CASE 2</text>
+
+  <rect x="100" y="380" width="200" height="68" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="200" y="402" text-anchor="middle" font-size="13" font-weight="600" fill="#111">ClickHouse</text>
+  <text x="200" y="418" text-anchor="middle" font-size="10" fill="#555">columnar OLAP</text>
+  <text x="200" y="432" text-anchor="middle" font-size="10" fill="#555">fast aggregations</text>
+  <text x="200" y="446" text-anchor="middle" font-size="10" font-style="italic" fill="#777">historical scans</text>
+
+  <rect x="400" y="380" width="200" height="68" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="500" y="402" text-anchor="middle" font-size="13" font-weight="600" fill="#111">RisingWave</text>
+  <text x="500" y="418" text-anchor="middle" font-size="10" fill="#555">streaming SQL</text>
+  <text x="500" y="432" text-anchor="middle" font-size="10" fill="#555">materialized views</text>
+  <text x="500" y="446" text-anchor="middle" font-size="10" font-style="italic" fill="#777">continuous aggregates</text>
+
+  <rect x="700" y="380" width="200" height="68" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="800" y="402" text-anchor="middle" font-size="13" font-weight="600" fill="#111">Stream enrich</text>
+  <text x="800" y="418" text-anchor="middle" font-size="10" fill="#555">Kafka features path</text>
+  <text x="800" y="432" text-anchor="middle" font-size="10" fill="#555">geo &#183; vendor &#183; velocity</text>
+  <text x="800" y="446" text-anchor="middle" font-size="10" font-style="italic" fill="#777">feature vector → ML</text>
+
+  <!-- OLAP → ML feed -->
+  <line x1="200" y1="448" x2="200" y2="488" stroke="#222" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="200" y1="488" x2="500" y2="488" stroke="#222" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="500" y1="448" x2="500" y2="488" stroke="#222" stroke-width="1.5"/>
+  <line x1="800" y1="448" x2="800" y2="488" stroke="#222" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="800" y1="488" x2="500" y2="488" stroke="#222" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="500" y1="488" x2="500" y2="510" stroke="#222" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="510" y="504" font-size="10" fill="#555">features</text>
+
+  <!-- ── Layer 4: ML ───────────────────────────────────────────── -->
+  <rect x="60" y="516" width="880" height="80" rx="6" fill="#fafafa" stroke="#222" stroke-width="1.5"/>
+  <text x="80" y="538" font-size="11" font-weight="700" fill="#666" letter-spacing="0.8">ML &#183; FRAUD SCORING &#183; INFERENCE &#183; USE CASE 3</text>
+
+  <rect x="380" y="548" width="160" height="38" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="460" y="565" text-anchor="middle" font-size="12" font-weight="600" fill="#111">XGBoost model</text>
+  <text x="460" y="579" text-anchor="middle" font-size="10" fill="#555">MLflow &#183; risk score</text>
+
+  <line x1="540" y1="567" x2="600" y2="567" stroke="#222" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="570" y="560" text-anchor="middle" font-size="10" fill="#555">scores</text>
+
+  <rect x="600" y="548" width="160" height="38" rx="4" fill="#ffffff" stroke="#222" stroke-width="1"/>
+  <text x="680" y="565" text-anchor="middle" font-size="12" font-weight="600" fill="#111">PGD</text>
+  <text x="680" y="579" text-anchor="middle" font-size="10" fill="#555">writes back to OLTP</text>
+
+  <!-- Footer note -->
+  <text x="500" y="610" text-anchor="middle" font-size="10" fill="#777">Use cases run independently &#8212; each one ships its own init job (OLTP seed, OLAP setup, ML pipeline).</text>
+</svg>

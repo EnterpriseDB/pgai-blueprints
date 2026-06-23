@@ -1,0 +1,68 @@
+{
+  "departments": [
+    {"department_id": 1, "department_name": "Engineering", "location": "San Francisco", "budget": 5000000},
+    {"department_id": 2, "department_name": "Sales", "location": "New York", "budget": 2000000},
+    {"department_id": 3, "department_name": "Human Resources", "location": "Chicago", "budget": 1000000},
+    {"department_id": 4, "department_name": "Finance", "location": "Boston", "budget": 1500000},
+    {"department_id": 5, "department_name": "Marketing", "location": "Los Angeles", "budget": 1800000}
+  ],
+  "positions": [
+    {"position_id": 1, "department_id": 1, "position_title": "Software Engineer", "levels": "Junior", "min_salary": 70000, "max_salary": 90000},
+    {"position_id": 2, "department_id": 1, "position_title": "Senior Software Engineer", "levels": "Senior", "min_salary": 120000, "max_salary": 160000},
+    {"position_id": 3, "department_id": 1, "position_title": "Engineering Manager", "levels": "Manager", "min_salary": 150000, "max_salary": 200000},
+    {"position_id": 4, "department_id": 2, "position_title": "Sales Representative", "levels": "Junior", "min_salary": 50000, "max_salary": 70000},
+    {"position_id": 5, "department_id": 2, "position_title": "Sales Manager", "levels": "Manager", "min_salary": 90000, "max_salary": 130000},
+    {"position_id": 6, "department_id": 3, "position_title": "HR Specialist", "levels": "Mid", "min_salary": 55000, "max_salary": 75000},
+    {"position_id": 7, "department_id": 3, "position_title": "HR Manager", "levels": "Manager", "min_salary": 85000, "max_salary": 115000},
+    {"position_id": 8, "department_id": 4, "position_title": "Financial Analyst", "levels": "Mid", "min_salary": 65000, "max_salary": 85000},
+    {"position_id": 9, "department_id": 4, "position_title": "Finance Director", "levels": "Director", "min_salary": 180000, "max_salary": 250000},
+    {"position_id": 10, "department_id": 5, "position_title": "Marketing Coordinator", "levels": "Junior", "min_salary": 45000, "max_salary": 60000}
+  ],
+  "employees": [
+    {"employee_id": 1, "department_id": 1, "position_id": 3, "manager_id": 1, "first_name": "John", "last_name": "Smith", "email": "john.smith@company.com", "hire_date": "2020-03-15", "salary": 175000},
+    {"employee_id": 2, "department_id": 1, "position_id": 2, "manager_id": 1, "first_name": "Sarah", "last_name": "Johnson", "email": "sarah.johnson@company.com", "hire_date": "2020-06-01", "salary": 140000},
+    {"employee_id": 3, "department_id": 1, "position_id": 2, "manager_id": 1, "first_name": "Michael", "last_name": "Williams", "email": "michael.williams@company.com", "hire_date": "2021-01-10", "salary": 135000},
+    {"employee_id": 4, "department_id": 1, "position_id": 1, "manager_id": 1, "first_name": "Emily", "last_name": "Brown", "email": "emily.brown@company.com", "hire_date": "2022-09-05", "salary": 75000},
+    {"employee_id": 5, "department_id": 2, "position_id": 5, "manager_id": 1, "first_name": "David", "last_name": "Davis", "email": "david.davis@company.com", "hire_date": "2020-08-20", "salary": 110000},
+    {"employee_id": 6, "department_id": 2, "position_id": 4, "manager_id": 5, "first_name": "Lisa", "last_name": "Martinez", "email": "lisa.martinez@company.com", "hire_date": "2021-03-15", "salary": 60000},
+    {"employee_id": 7, "department_id": 3, "position_id": 7, "manager_id": 1, "first_name": "Jennifer", "last_name": "Taylor", "email": "jennifer.taylor@company.com", "hire_date": "2020-05-01", "salary": 105000},
+    {"employee_id": 8, "department_id": 3, "position_id": 6, "manager_id": 7, "first_name": "Robert", "last_name": "Anderson", "email": "robert.anderson@company.com", "hire_date": "2021-11-10", "salary": 65000},
+    {"employee_id": 9, "department_id": 4, "position_id": 9, "manager_id": 1, "first_name": "William", "last_name": "Thomas", "email": "william.thomas@company.com", "hire_date": "2020-02-01", "salary": 220000},
+    {"employee_id": 10, "department_id": 4, "position_id": 8, "manager_id": 9, "first_name": "Jessica", "last_name": "Garcia", "email": "jessica.garcia@company.com", "hire_date": "2022-01-15", "salary": 75000},
+    {"employee_id": 11, "department_id": 5, "position_id": 10, "manager_id": 1, "first_name": "Amanda", "last_name": "Wilson", "email": "amanda.wilson@company.com", "hire_date": "2023-02-20", "salary": 50000},
+    {"employee_id": 12, "department_id": 1, "position_id": 1, "manager_id": 1, "first_name": "James", "last_name": "Miller", "email": "james.miller@company.com", "hire_date": "2023-06-01", "salary": 72000}
+  ],
+  "salaries": [
+    {"salary_id": 1, "employee_id": 1, "base_salary": 175000, "bonus": 35000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 2, "employee_id": 2, "base_salary": 140000, "bonus": 20000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 3, "employee_id": 3, "base_salary": 135000, "bonus": 18000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 4, "employee_id": 4, "base_salary": 75000, "bonus": 5000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 5, "employee_id": 5, "base_salary": 110000, "bonus": 25000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 6, "employee_id": 6, "base_salary": 60000, "bonus": 8000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 7, "employee_id": 7, "base_salary": 105000, "bonus": 15000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 8, "employee_id": 8, "base_salary": 65000, "bonus": 5000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 9, "employee_id": 9, "base_salary": 220000, "bonus": 50000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 10, "employee_id": 10, "base_salary": 75000, "bonus": 8000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 11, "employee_id": 11, "base_salary": 50000, "bonus": 3000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 12, "employee_id": 12, "base_salary": 72000, "bonus": 4000, "effective_date": "2024-01-01", "is_current": true},
+    {"salary_id": 13, "employee_id": 1, "base_salary": 160000, "bonus": 30000, "effective_date": "2023-01-01", "is_current": false},
+    {"salary_id": 14, "employee_id": 2, "base_salary": 125000, "bonus": 15000, "effective_date": "2023-01-01", "is_current": false}
+  ],
+  "attendance": [
+    {"attendance_id": 1, "employee_id": 1, "attendance_date": "2024-01-15", "check_in": "08:30", "check_out": "18:00", "status": "present"},
+    {"attendance_id": 2, "employee_id": 2, "attendance_date": "2024-01-15", "check_in": "09:00", "check_out": "17:30", "status": "present"},
+    {"attendance_id": 3, "employee_id": 3, "attendance_date": "2024-01-15", "check_in": "08:45", "check_out": "17:15", "status": "present"},
+    {"attendance_id": 4, "employee_id": 4, "attendance_date": "2024-01-15", "check_in": "09:15", "check_out": "18:30", "status": "late"},
+    {"attendance_id": 5, "employee_id": 5, "attendance_date": "2024-01-15", "check_in": "08:00", "check_out": "17:00", "status": "present"},
+    {"attendance_id": 6, "employee_id": 6, "attendance_date": "2024-01-15", "check_in": "08:30", "check_out": "17:30", "status": "present"},
+    {"attendance_id": 7, "employee_id": 7, "attendance_date": "2024-01-15", "check_in": null, "check_out": null, "status": "absent"},
+    {"attendance_id": 8, "employee_id": 8, "attendance_date": "2024-01-15", "check_in": "09:00", "check_out": "17:00", "status": "present"},
+    {"attendance_id": 9, "employee_id": 9, "attendance_date": "2024-01-15", "check_in": "08:00", "check_out": "19:00", "status": "present"},
+    {"attendance_id": 10, "employee_id": 10, "attendance_date": "2024-01-15", "check_in": "08:30", "check_out": "17:30", "status": "present"},
+    {"attendance_id": 11, "employee_id": 11, "attendance_date": "2024-01-15", "check_in": "09:00", "check_out": "13:00", "status": "half_day"},
+    {"attendance_id": 12, "employee_id": 12, "attendance_date": "2024-01-15", "check_in": "08:45", "check_out": "17:45", "status": "present"},
+    {"attendance_id": 13, "employee_id": 1, "attendance_date": "2024-01-16", "check_in": "08:30", "check_out": "18:30", "status": "present"},
+    {"attendance_id": 14, "employee_id": 2, "attendance_date": "2024-01-16", "check_in": "09:00", "check_out": "17:00", "status": "present"},
+    {"attendance_id": 15, "employee_id": 3, "attendance_date": "2024-01-16", "check_in": "08:30", "check_out": "17:30", "status": "present"}
+  ]
+}

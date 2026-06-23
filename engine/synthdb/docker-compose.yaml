@@ -1,0 +1,22 @@
+# For demonstration purposes only.
+
+services:
+  synthdb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dbox-synthdb
+    ports:
+      - "127.0.0.1:8050:8050"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./models:/app/models
+      - ./uploads:/app/uploads
+      - ./output:/app/output
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8050/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

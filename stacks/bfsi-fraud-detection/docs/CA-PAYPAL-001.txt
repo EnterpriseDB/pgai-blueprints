@@ -1,0 +1,481 @@
+Fraud Detection Rule: CA-PAYPAL-001
+Rule Name: Canada PayPal Fraud Prevention
+Region: Canada (CA)
+Payment Vendor: PayPal
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors PayPal transactions in Canada with focus on e-transfer scams, online marketplace fraud, cross-border shopping complications, and unique Canadian fraud patterns affecting PayPal users.
+
+RULE PARAMETERS
+- Threshold Amount: CAD $3,000 (approximately USD $2,200)
+- Risk Score Threshold: 0.75
+- Action: Alert (flag for review with educational intervention)
+- Category: Fraud Prevention and Customer Protection
+
+RULE DESCRIPTION
+Canadian PayPal users face specific challenges including the prevalence of Interac e-Transfer as an alternative payment method (creating confusion), active online marketplace fraud (Kijiji, Facebook Marketplace), package forwarding schemes, and bilingual scam campaigns. This rule addresses these Canadian-specific risks.
+
+CANADIAN PAYPAL LANDSCAPE
+
+PAYMENT ECOSYSTEM:
+- Interac e-Transfer dominates P2P payments (competes with PayPal)
+- Confusion between Interac and PayPal
+- PayPal less common for P2P than in US
+- Common for online marketplace purchases
+- Cross-border shopping with US merchants
+- Cryptocurrency purchases via PayPal
+
+INTERAC VS PAYPAL CONFUSION:
+- Scammers exploit confusion between the two
+- "Send via Interac or PayPal" - creates ambiguity
+- No buyer protection on Interac (major difference)
+- Victims may think protections are equivalent
+- Educational intervention critical
+
+MARKETPLACE LANDSCAPE:
+- Kijiji (most popular classifieds)
+- Facebook Marketplace
+- Craigslist (less popular than US)
+- VarageSale (local community sales)
+- eBay Canada
+
+TRIGGERING CONDITIONS
+
+This rule triggers when:
+1. PayPal transaction from Canadian account ≥ CAD $3,000
+2. Marketplace transaction with risk indicators
+3. Fraud risk score ≥ 0.75
+4. Pattern matching known Canadian scam types
+
+OR special conditions:
+5. "Friends and Family" payment for goods/services
+6. First marketplace transaction over CAD $1,000
+7. Cross-border payment with red flags
+8. Interac-related phishing indicators
+9. Package forwarding risk factors
+
+RISK SCORE CALCULATION
+
+BASE CANADIAN PAYPAL RISK: 0.20
+Baseline acknowledging marketplace fraud prevalence
+
+TRANSACTION TYPE (+0.00 to +0.35):
+- Friends and Family for commercial: +0.35
+- No buyer protection selected: +0.25
+- Goods and Services (protected): +0.05
+- International (non-US): +0.20
+- Gift card purchase: +0.30
+
+MARKETPLACE INDICATORS (+0.00 to +0.30):
+- First transaction with unknown seller: +0.20
+- High-value item (vehicle, equipment): +0.25
+- Seller has no reviews/history: +0.20
+- Deal "too good to be true": +0.25
+- Urgency in seller communication: +0.15
+- Pickup vs. shipping: +0.10
+
+CUSTOMER BEHAVIOR (+0.00 to +0.30):
+- New PayPal account: +0.20
+- Recent password change: +0.15
+- Multiple failed payments: +0.20
+- Unusual time of day: +0.10
+- Geographic location change: +0.15
+
+COMMUNICATION RED FLAGS (+0.00 to +0.20):
+- Mentions "Interac unavailable": +0.15
+- Pressure to use Friends and Family: +0.20
+- Seller refuses protected payment: +0.25
+- Romance/emergency element: +0.20
+
+Example Score:
+- Base risk: 0.20
+- Friends and Family requested: +0.35
+- High-value vehicle purchase: +0.25
+- Seller no history: +0.20
+- Pressure tactics: +0.20
+- Total: 1.20 → BLOCK TRANSACTION
+
+FRAUD SCENARIOS SPECIFIC TO CANADIAN PAYPAL
+
+SCENARIO 1: KIJIJI/FACEBOOK MARKETPLACE SCAM
+Description: Fake seller scam on Canadian online marketplaces.
+
+Pattern:
+- Attractive listing (vehicle, electronics, furniture)
+- Price below market value
+- Seller claims "moving soon" or "need quick sale"
+- Requests PayPal Friends and Family
+- May provide fake tracking number
+- Item doesn't exist or not as described
+
+Example:
+- Listing: 2020 Honda Civic, CAD $12,000 (market value $18,000)
+- Platform: Kijiji Toronto
+- Seller: "Relocating to Vancouver, must sell this week"
+- Payment request: PayPal Friends and Family "to avoid fees"
+- Red flags: Too cheap, pressure, no protection
+- Risk Score: 0.92
+- Action: BLOCK, educate about marketplace fraud, recommend Goods and Services only
+
+SCENARIO 2: "INTERAC NOT WORKING" SCAM
+Description: Seller claims Interac e-Transfer isn't working, requests PayPal instead.
+
+Canadian Context:
+- Interac is default for P2P in Canada
+- Scammers exploit preference by claiming technical issues
+- Pushes victims to less familiar PayPal
+- Specifically requests Friends and Family
+
+Example:
+- Customer: Buying used iPhone in Calgary for CAD $800
+- Seller: "My Interac isn't working, can you send PayPal?"
+- Requests: Friends and Family to "avoid delays"
+- Red flags: Interac rarely has issues, F&F request, no buyer protection
+- Risk Score: 0.82
+- Action: ALERT customer, recommend in-person cash transaction or Goods and Services
+
+SCENARIO 3: OVERPAYMENT / FAKE PAYMENT SCAM
+Description: Buyer "overpays" and requests refund of difference.
+
+Canadian Variation:
+- Targets sellers on Kijiji, Facebook Marketplace
+- Fake PayPal payment email (looks official)
+- Asks for refund via Interac e-Transfer
+- Original PayPal payment never actually occurred
+- Seller out the "refund" amount
+
+Example:
+- Seller: Listing laptop for CAD $1,200 on Facebook Marketplace
+- Buyer: Sends screenshot showing CAD $1,600 payment
+- Request: "Please refund $400 via Interac, my mistake"
+- Reality: No actual PayPal payment received
+- Risk Score: 0.95
+- Action: BLOCK any "refund", alert seller, educate about overpayment scams
+
+SCENARIO 4: RENTAL/DEPOSIT SCAM
+Description: Fake rental listing requires deposit via PayPal.
+
+Canadian Angle:
+- Targets tight rental markets (Toronto, Vancouver)
+- Lists fake apartment/room rental
+- Can't show property (out of town, traveling)
+- Requires deposit via PayPal Friends and Family
+- Property doesn't exist or isn't actually for rent
+
+Example:
+- Listing: Downtown Toronto apartment, CAD $1,800/month
+- Landlord: "I'm in Calgary, can't show in person"
+- Deposit: First and last month = CAD $3,600
+- Payment: Must be Friends and Family for "tax reasons"
+- Red flags: Can't view, F&F required, pressure to commit
+- Risk Score: 0.90
+- Action: BLOCK, warn about rental scams, recommend viewing before payment
+
+SCENARIO 5: PACKAGE FORWARDING / RESHIPPING SCAM
+Description: Scammer uses victim's PayPal to purchase goods, ships to victim, asks victim to forward.
+
+Pattern:
+- Victim offered "work from home" job
+- "Job" is receiving packages and reshipping
+- Packages purchased with stolen PayPal accounts
+- Victim becomes unwitting accomplice to fraud
+- Victim may be liable for stolen goods
+
+Example:
+- Customer: Mississauga resident, work-from-home "job"
+- Activity: Receiving electronics, reshipping to US/overseas
+- Payment: "Employer" sends money via PayPal
+- Reality: Packages bought with stolen accounts, customer is mule
+- Risk Score: 0.85
+- Action: BLOCK payments, educate about reshipping scams, report to RCMP if confirmed
+
+SCENARIO 6: QUEBEC FRENCH-LANGUAGE PHISHING
+Description: Phishing emails in French targeting Quebec PayPal users.
+
+Pattern:
+- Well-written French phishing email
+- Claims account issue or suspicious activity
+- Requests "verification" via link
+- Fake PayPal login page
+- Steals credentials and financial info
+
+Example:
+- Target: Quebec PayPal users
+- Email: "PayPal: Activité suspecte détectée"
+- Content: "Veuillez vérifier votre compte immédiatement"
+- Link: Fake PayPal site (paypa1.com or similar)
+- Risk Score: Account takeover risk
+- Action: If account accessed from fake site, freeze account, force password reset, educate about phishing
+
+SCENARIO 7: ROMANCE SCAM WITH PAYPAL
+Description: Online romance leading to PayPal payment requests.
+
+Canadian Context:
+- Targets lonely/isolated Canadians
+- "Partner" claims to be Canadian abroad
+- Eventually needs emergency funds
+- May claim to need funds to return to Canada
+- Requests via PayPal Friends and Family
+
+Example:
+- Customer: 58-year-old in Thunder Bay, Ontario
+- Story: Met "Canadian soldier" on dating site
+- Stationed "overseas on UN mission"
+- Emergency: Needs CAD $5,000 for medical treatment
+- Red flags: Never met, emergency funds, Friends and Family
+- Risk Score: 0.95
+- Action: BLOCK, educate about romance scams, provide support resources, report to CAFC
+
+SCENARIO 8: CRYPTO PURCHASE SCAM
+Description: Fake Canadian crypto platforms or P2P crypto scams.
+
+Pattern:
+- Customer wants to buy cryptocurrency
+- Finds "seller" on Kijiji, Facebook, Localbitcoins
+- Agrees on amount (e.g., CAD $4,000 for Bitcoin)
+- Sends PayPal Friends and Family payment
+- Never receives crypto
+- Can't reverse F&F payment
+
+Example:
+- Customer: Vancouver crypto buyer
+- Platform: Localbitcoins or Facebook group
+- Amount: CAD $5,500 for Bitcoin
+- Payment: Friends and Family as requested
+- Reality: Scammer disappears, no Bitcoin delivered
+- Risk Score: 0.88
+- Action: BLOCK F&F for crypto, educate about crypto scams, recommend registered exchanges only
+
+BILINGUAL FRAUD PREVENTION
+
+ENGLISH-FRENCH CONSIDERATIONS:
+- All warnings available in both languages
+- Quebec gets French by default
+- Bilingual customer service
+- Scam examples in both languages
+- Educational materials translated
+
+QUEBEC-SPECIFIC PATTERNS:
+- French-language phishing more sophisticated
+- Impersonation of Quebec organizations (Revenu Québec, Hydro-Québec)
+- Desjardins credential phishing (major Quebec financial institution)
+- Cultural references in scams (Quebec politics, events)
+
+CROSS-BORDER (CANADA-US) CONSIDERATIONS
+
+LEGITIMATE PATTERNS:
+- Shopping from US merchants (cheaper prices, more selection)
+- PayPal standard for US e-commerce
+- Package forwarding to Canada
+- Family in both countries
+- Snowbirds with US addresses
+
+RED FLAGS:
+- Package forwarding to residential address
+- First-time high-value US purchase
+- Merchant unknown or suspicious
+- Multiple US shipping addresses
+- Can't explain reason for US purchase
+
+CURRENCY CONFUSION:
+- USD vs CAD confusion
+- Exchange rate not understood
+- Unexpected total amount
+- Merchant displays USD but customer thinks CAD
+- PayPal conversion fees not anticipated
+
+EDUCATIONAL INTERVENTIONS:
+
+When customer selects Friends and Family for marketplace purchase:
+
+"⚠️ WARNING: PayPal Friends and Family provides NO buyer protection.
+
+You selected Friends and Family, but this appears to be a purchase of goods or services. Friends and Family should only be used for:
+✓ Sending money to family members
+✓ Reimbursing friends
+✓ Gifts to people you know personally
+
+If you're purchasing something:
+✓ Use Goods and Services for buyer protection
+✓ If seller insists on Friends and Family, it may be a scam
+✓ You will NOT be able to dispute or get a refund
+
+Canadian Anti-Fraud Centre: 1-888-495-8501
+
+Do you want to change to Goods and Services payment? [YES / NO]"
+
+MARKETPLACE SAFETY GUIDANCE:
+
+"Tips for Safe Marketplace Transactions in Canada:
+
+BEST PRACTICES:
+✓ Meet in public place (police station parking lot ideal)
+✓ Inspect item before paying
+✓ Use cash for in-person transactions
+✓ If using PayPal, always use Goods and Services
+✓ Never pay via Friends and Family for purchases
+✓ Be wary of deals that seem too good to be true
+
+RED FLAGS:
+✗ Seller insists on Friends and Family
+✗ Can't meet in person / item is "shipped"
+✗ Price significantly below market value
+✗ Pressure to pay quickly
+✗ Seller's story doesn't add up
+✗ Requests Interac deposit to "hold" item
+
+For more information: antifraudcentre-centreantifraude.ca"
+
+INTEGRATION WITH CANADIAN SYSTEMS
+
+CANADIAN ANTI-FRAUD CENTRE (CAFC):
+- Report PayPal fraud
+- Access fraud intelligence
+- Share scam patterns
+- Victim support
+
+INTERAC ASSOCIATION:
+- Coordinate on payment method confusion
+- Share fraud intelligence
+- Consumer education alignment
+
+PROVINCIAL POLICE:
+- RCMP for federal crimes
+- Provincial forces (OPP, SQ, etc.)
+- Municipal police for local fraud
+
+BETTER BUSINESS BUREAU:
+- Scam tracker
+- Merchant verification
+- Consumer complaints
+
+EXAMPLES
+
+Example 1 - Legitimate Marketplace Purchase (APPROVE):
+- Customer: Calgary, established PayPal user
+- Transaction: CAD $2,400 for used camera equipment
+- Meeting: In-person at coffee shop
+- Payment: Goods and Services (buyer protection)
+- Risk Score: 0.40
+- Action: APPROVE with marketplace safety tips
+
+Example 2 - Kijiji Vehicle Scam (BLOCK):
+- Customer: Mississauga
+- Transaction: CAD $15,000 for truck on Kijiji
+- Red flags: Friends and Family, never seen vehicle, seller "out of province"
+- Risk Score: 0.96
+- Action: BLOCK immediately, educate about vehicle scams, recommend in-person only
+
+Example 3 - Interac Confusion Scam (ALERT):
+- Customer: Buying laptop for CAD $900
+- Seller: "Interac not working, use PayPal Friends and Family"
+- Risk Score: 0.82
+- Action: ALERT customer, explain difference, recommend Goods and Services or wait for Interac
+
+Example 4 - Rental Deposit Scam (BLOCK):
+- Customer: Vancouver, searching for apartment
+- Transaction: CAD $3,600 deposit for apartment
+- Red flags: Can't view, landlord "overseas", Friends and Family required
+- Risk Score: 0.92
+- Action: BLOCK, provide rental scam education, recommend viewing before payment
+
+REGULATORY COMPLIANCE
+
+FINTRAC:
+- Suspicious Transaction Reports (STR)
+- Large transaction reports if applicable
+- Know Your Client requirements
+- Record keeping
+
+PIPEDA (PRIVACY):
+- Personal information protection
+- Consent for data use
+- Breach notification
+- Right to access
+
+PROVINCIAL CONSUMER PROTECTION:
+- Ontario Consumer Protection Act
+- Quebec Consumer Protection Act
+- Other provincial variations
+- Cooling-off periods
+- Refund rights
+
+AUTOMATED RESPONSE ACTIONS
+
+WHEN SCORE 0.75-0.85 (Medium-High Risk):
+1. Display strong warning about payment type
+2. Offer to switch to Goods and Services
+3. Provide marketplace safety tips
+4. Require customer acknowledgment of risks
+5. Proceed if customer confirms after warnings
+
+WHEN SCORE 0.85-0.95 (High Risk):
+1. HOLD transaction for manual review
+2. Contact customer via verified phone
+3. Ask targeted questions about transaction
+4. Verify not responding to scam
+5. Block if customer shows scam victim indicators
+
+WHEN SCORE > 0.95 (Critical Risk):
+1. BLOCK transaction immediately
+2. Contact customer with fraud alert
+3. Provide specific scam education
+4. Report to CAFC if appropriate
+5. Consider account review
+6. Offer resources and support
+
+CUSTOMER COMMUNICATION
+
+ENGLISH VERSION:
+"⚠️ TRANSACTION HELD FOR YOUR PROTECTION
+
+We've identified risk factors in this PayPal transaction:
+• [Specific risks identified]
+
+Before proceeding:
+✓ Verify you know and trust this recipient
+✓ Ensure this is not a marketplace purchase
+✓ Confirm you're not responding to unexpected contact
+✓ Understand you have NO buyer protection with Friends and Family
+
+Questions? Call PayPal Canada: 1-888-221-1161
+Report fraud: Canadian Anti-Fraud Centre 1-888-495-8501"
+
+FRENCH VERSION (QUEBEC):
+"⚠️ TRANSACTION RETENUE POUR VOTRE PROTECTION
+
+Nous avons identifié des facteurs de risque dans cette transaction PayPal:
+• [Risques spécifiques identifiés]
+
+Avant de continuer:
+✓ Vérifiez que vous connaissez et faites confiance au destinataire
+✓ Assurez-vous qu'il ne s'agit pas d'un achat sur une plateforme de petites annonces
+✓ Confirmez que vous ne répondez pas à un contact inattendu
+✓ Comprenez que vous n'avez AUCUNE protection d'acheteur avec Amis et famille
+
+Questions? Appelez PayPal Canada: 1-888-221-1161
+Signaler une fraude: Centre antifraude du Canada 1-888-495-8501"
+
+RELATED RULES
+- CA-STRIPE-001: Cross-vendor Canadian monitoring
+- GLOBAL-001: High-value threshold (overlaps at CAD $13,500)
+- PayPal internal fraud systems
+- Interac fraud prevention coordination
+
+PERFORMANCE METRICS
+- Marketplace Scam Prevention: > 75%
+- Friends and Family Intervention Rate: > 80%
+- False Positive Rate: < 20% (acceptable for protection level)
+- Customer Education: 90% receive warnings
+- Bilingual Service: 100% French availability for Quebec
+
+TRAINING REQUIREMENTS
+Canadian PayPal fraud analysts must complete:
+- Interac e-Transfer vs PayPal differences
+- Canadian marketplace platforms (Kijiji, Facebook, etc.)
+- Bilingual communication (French/English)
+- FINTRAC reporting requirements
+- Provincial consumer protection laws
+- Canadian Anti-Fraud Centre coordination
+- Cultural sensitivity for diverse Canadian population

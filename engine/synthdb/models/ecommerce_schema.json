@@ -1,0 +1,20 @@
+{
+  "model_name": "ecommerce",
+  "description": "E-commerce Platform System",
+  "tables": {
+    "categories": {"primary_key": "category_id"},
+    "customers": {"primary_key": "customer_id"},
+    "products": {"primary_key": "product_id", "foreign_keys": {"category_id": "categories.category_id"}},
+    "orders": {"primary_key": "order_id", "foreign_keys": {"customer_id": "customers.customer_id"}},
+    "order_items": {"primary_key": "order_item_id", "foreign_keys": {"order_id": "orders.order_id", "product_id": "products.product_id"}},
+    "reviews": {"primary_key": "review_id", "foreign_keys": {"product_id": "products.product_id", "customer_id": "customers.customer_id"}}
+  },
+  "relationships": [
+    {"parent": "categories", "child": "products"},
+    {"parent": "customers", "child": "orders"},
+    {"parent": "customers", "child": "reviews"},
+    {"parent": "products", "child": "order_items"},
+    {"parent": "products", "child": "reviews"},
+    {"parent": "orders", "child": "order_items"}
+  ]
+}

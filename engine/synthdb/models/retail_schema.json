@@ -1,0 +1,22 @@
+{
+  "model_name": "retail",
+  "description": "Retail Store Management System",
+  "tables": {
+    "stores": {"primary_key": "store_id"},
+    "suppliers": {"primary_key": "supplier_id"},
+    "product_categories": {"primary_key": "category_id"},
+    "products": {"primary_key": "product_id", "foreign_keys": {"category_id": "product_categories.category_id", "supplier_id": "suppliers.supplier_id"}},
+    "inventory": {"primary_key": "inventory_id", "foreign_keys": {"store_id": "stores.store_id", "product_id": "products.product_id"}},
+    "sales": {"primary_key": "sale_id", "foreign_keys": {"store_id": "stores.store_id"}},
+    "sale_items": {"primary_key": "sale_item_id", "foreign_keys": {"sale_id": "sales.sale_id", "product_id": "products.product_id"}}
+  },
+  "relationships": [
+    {"parent": "stores", "child": "inventory"},
+    {"parent": "stores", "child": "sales"},
+    {"parent": "suppliers", "child": "products"},
+    {"parent": "product_categories", "child": "products"},
+    {"parent": "products", "child": "inventory"},
+    {"parent": "products", "child": "sale_items"},
+    {"parent": "sales", "child": "sale_items"}
+  ]
+}

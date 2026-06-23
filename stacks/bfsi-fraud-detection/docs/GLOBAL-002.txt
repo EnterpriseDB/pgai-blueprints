@@ -1,0 +1,432 @@
+Fraud Detection Rule: GLOBAL-002
+Rule Name: Global Crypto Exchange Monitoring
+Region: GLOBAL (All Regions)
+Payment Vendor: All Vendors
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule provides specialized monitoring for cryptocurrency exchange transactions, which present unique fraud risks including money laundering, scams, regulatory violations, and high volatility-related fraud. Given the global and decentralized nature of crypto, this rule applies universally across all regions and payment vendors.
+
+RULE PARAMETERS
+- Threshold Amount: $1,000.00 USD (or equivalent)
+- Risk Score Threshold: 0.80
+- Action: Review (mandatory human review with enhanced due diligence)
+- Category: High-Risk Merchant Category
+- Regulatory Focus: Anti-Money Laundering (AML), Know Your Customer (KYC), Counter-Terrorism Financing (CTF)
+
+RULE DESCRIPTION
+Cryptocurrency transactions require heightened scrutiny due to:
+1. High fraud rates in crypto industry
+2. Money laundering and terrorist financing risks
+3. Regulatory uncertainty and compliance requirements
+4. Scams targeting inexperienced investors
+5. Irreversible nature of crypto transactions
+6. Volatile market conditions enabling price manipulation
+7. International sanctions evasion potential
+
+WHY CRYPTO REQUIRES SPECIAL MONITORING
+
+UNIQUE RISK FACTORS:
+- Transactions are irreversible (cannot chargeback crypto)
+- Pseudo-anonymous nature complicates identification
+- Cross-border by default (no geographic boundaries)
+- Regulatory requirements vary dramatically by jurisdiction
+- High-value targets for hackers and social engineering
+- Pump-and-dump schemes and market manipulation
+- Initial Coin Offering (ICO) scams
+- Fake exchanges and wallet services
+- Romance scams ending in crypto payment requests
+
+REGULATORY LANDSCAPE:
+- United States: FinCEN Money Services Business (MSB) registration required
+- European Union: 5th Anti-Money Laundering Directive (5AMLD)
+- United Kingdom: FCA registration mandatory since January 2020
+- Canada: FINTRAC registration for Money Service Businesses
+- Many countries: Outright bans or severe restrictions
+
+TRIGGERING CONDITIONS
+
+This rule triggers when ALL of the following are true:
+1. Merchant is identified as cryptocurrency exchange or crypto service
+2. Transaction amount ≥ $1,000 USD equivalent
+3. Calculated fraud risk score ≥ 0.80
+
+MERCHANT IDENTIFICATION:
+Crypto exchanges identified by:
+- Merchant Category Code (MCC): 6051 (Crypto currency)
+- Merchant name contains: "crypto", "bitcoin", "exchange", "blockchain", "coin"
+- Known exchange domain/business name
+- Self-reported category: digital currency
+
+RISK SCORE CALCULATION
+
+BASE CRYPTO RISK: 0.50
+All crypto transactions start with elevated baseline risk
+
+ADDITIONAL RISK FACTORS:
+
+MERCHANT VERIFICATION (+0.00 to +0.30):
+- Unlicensed exchange in regulated jurisdiction: +0.30
+- No regulatory registration: +0.25
+- New exchange (< 1 year): +0.20
+- Poor online reputation/reviews: +0.15
+- No customer support: +0.10
+- Established, licensed exchange (Coinbase, Kraken): +0.05
+
+CUSTOMER PROFILE (+0.00 to +0.20):
+- First crypto purchase: +0.15
+- Elderly customer (> 65 years): +0.20 (high scam risk)
+- Recent account takeover indicators: +0.20
+- History of scam victimization: +0.15
+- No prior crypto knowledge/experience: +0.10
+
+TRANSACTION PATTERN (+0.00 to +0.20):
+- Urgent or pressured transaction: +0.20
+- Multiple failed payment attempts: +0.15
+- Amount unusual for customer: +0.15
+- Round number large amount ($10K, $25K): +0.10
+- Outside customer's normal transaction times: +0.10
+
+COMMUNICATION RED FLAGS (+0.00 to +0.10):
+- Customer mentions "investment opportunity": +0.10
+- Romance scam keywords ("fiancé needs help"): +0.10
+- Claims of guaranteed returns: +0.10
+- Pressure from unknown third party: +0.10
+
+Example Score Calculation:
+- Base crypto risk: 0.50
+- Unlicensed exchange: +0.30
+- First crypto purchase: +0.15
+- Urgent transaction: +0.20
+- Total: 1.15 → HIGH RISK, BLOCK TRANSACTION
+
+COMMON CRYPTO FRAUD SCENARIOS
+
+SCENARIO 1: ROMANCE SCAM WITH CRYPTO PAYMENT
+Description: Victim develops online relationship, "partner" eventually requests crypto investment or emergency funds.
+
+Pattern:
+- Customer has no crypto history
+- Often elderly or isolated individual
+- Large single transaction ($5K-$50K)
+- Sends to unfamiliar exchange or wallet
+- May mention: "help my family", "investment together", "can't access their funds"
+
+Example:
+- Customer: 67-year-old widow, Margaret from Ohio
+- Transaction: $23,000 to unknown crypto exchange
+- Contact: Met "military officer" on dating site 3 months ago
+- Red flags: Urgency, first crypto transaction, unusual amount
+- Risk Score: 0.95
+- Action: BLOCK transaction, contact customer, educate about romance scams, report to FBI IC3
+
+SCENARIO 2: FAKE CRYPTO INVESTMENT PLATFORM
+Description: Scammers create fake investment platforms promising high returns on crypto investments.
+
+Pattern:
+- Fake website looks legitimate (copied from real exchanges)
+- Promises guaranteed returns (10-20% monthly)
+- Shows fake account balances and "profits"
+- Requests increasingly large "investments"
+- Eventually unable to withdraw funds
+
+Example:
+- Customer: Young professional, excited about crypto
+- Transaction: $15,000 to "BitMax Pro" exchange
+- Website: Professional-looking but created 2 months ago
+- Red flags: Promises 15% monthly returns, no regulatory registration
+- Risk Score: 0.90
+- Action: BLOCK, warn customer, report domain to authorities
+
+SCENARIO 3: CRYPTO MONEY LAUNDERING
+Description: Criminals convert proceeds of crime into cryptocurrency to obscure origin.
+
+Pattern:
+- Multiple small transactions (structuring)
+- Aggregating just below reporting thresholds
+- Use of privacy coins (Monero, Zcash)
+- Chain of exchanges to obscure trail
+- Rapid conversion back to fiat currency
+
+Example:
+- Customer: Business account with vague description
+- Pattern: Daily $9,500 purchases of crypto (just under $10K reporting)
+- Frequency: 5 days per week for 3 weeks
+- Red flags: Structuring, no legitimate business purpose
+- Risk Score: 0.88
+- Action: BLOCK, file Suspicious Activity Report (SAR), freeze account
+
+SCENARIO 4: EXCHANGE HACK / INSIDER THEFT
+Description: Customer account at legitimate exchange compromised, funds stolen.
+
+Pattern:
+- Sudden large withdrawal after account compromise
+- New device/location attempting transaction
+- Customer may not be aware of compromise yet
+- Funds moved to unknown wallet quickly
+
+Example:
+- Customer: Established Coinbase user, $50K balance
+- Transaction: $45,000 withdrawal to external wallet
+- Indicators: New device, different country, 3 AM transaction
+- Customer behavior: Different than normal patterns
+- Risk Score: 0.85
+- Action: HOLD transaction, contact customer immediately, verify intent
+
+SCENARIO 5: ICO / ALTCOIN SCAM
+Description: Fraudulent Initial Coin Offering or fake new cryptocurrency.
+
+Pattern:
+- Heavy marketing / social media promotion
+- Celebrity endorsements (often fake)
+- Limited-time opportunity pressure
+- White paper is plagiarized or nonsensical
+- Anonymous team or fake identities
+
+Example:
+- Customer: Wants to invest in "MegaChain ICO"
+- Amount: $8,000 via wire to unknown exchange
+- Red flags: ICO not registered, team profiles fake, unrealistic promises
+- Risk Score: 0.92
+- Action: BLOCK, educate customer about ICO fraud
+
+SCENARIO 6: EMPLOYMENT SCAM WITH CRYPTO
+Description: Victim offered fake job, receives check, told to buy crypto and send to "employer."
+
+Pattern:
+- Check deposit (will bounce in 3-5 days)
+- Immediate instruction to purchase crypto
+- Urgency: "must do today for equipment purchase"
+- Customer believes legitimate employment
+- Funds disappear when check bounces
+
+Example:
+- Customer: Job seeker, offered "remote assistant" position
+- Scenario: Received $3,500 check, told to buy crypto and send $3,000
+- Red flags: New employer, immediate crypto request, check from third party
+- Risk Score: 0.87
+- Action: BLOCK crypto purchase, warn about check fraud, report to FTC
+
+MERCHANT VERIFICATION CHECKLIST
+
+LICENSED EXCHANGES (Lower Risk):
+United States: Coinbase, Kraken, Gemini (FinCEN registered, state licensed)
+European Union: Bitstamp, Bitpanda (authorized under 5AMLD)
+United Kingdom: Crypto.com UK, Gemini UK (FCA registered)
+Canada: Coinsquare, NDAX (FINTRAC registered)
+Japan: bitFlyer, Coincheck (FSA licensed)
+
+VERIFICATION STEPS:
+1. Check regulatory registration in operating jurisdiction
+2. Verify domain ownership and age
+3. Review online reputation (Reddit, TrustPilot, Better Business Bureau)
+4. Confirm customer support channels exist and respond
+5. Check for security features (2FA, cold storage, insurance)
+6. Review terms of service for red flags
+
+RED FLAGS FOR FAKE EXCHANGES:
+- No physical address or registered business
+- Website created within last 6 months
+- Grammar/spelling errors on website
+- No clear ownership or team information
+- Promises of guaranteed returns
+- No customer support or non-responsive
+- Requires payment via gift cards or wire transfers
+- Not listed on CoinMarketCap or similar indexes
+
+ENHANCED DUE DILIGENCE PROCEDURES
+
+For all crypto transactions triggering this rule:
+
+CUSTOMER INTERVIEW QUESTIONS:
+1. "Have you purchased cryptocurrency before?"
+2. "What is the purpose of this crypto purchase?"
+3. "How did you hear about this exchange/investment?"
+4. "Do you understand that crypto transactions cannot be reversed?"
+5. "Are you under any pressure to make this purchase?"
+6. "Have you verified the legitimacy of the exchange?"
+7. "Do you know the recipient of these funds personally?"
+8. "Are you making this purchase on behalf of someone else?"
+9. "What do you know about cryptocurrency risks?"
+10. "Have you been promised specific returns?"
+
+RED FLAG RESPONSES:
+- Vague or inconsistent answers
+- Mentions third party directing the purchase
+- Doesn't understand crypto basics
+- Promises of high guaranteed returns
+- Romantic partner involved
+- "Investment advisor" or "trading expert" mentioned
+- Urgency or pressure evident
+- Reluctant to answer questions
+
+SOURCE OF FUNDS VERIFICATION:
+- Where is the money coming from?
+- Recent large deposits (possible scam victim receiving fraudulent check)
+- Borrowed money or credit card advances (high risk)
+- Retirement account withdrawals (common in elder scams)
+- Legitimate employment income and savings (lower risk)
+
+DOCUMENTATION REQUIREMENTS:
+- Screenshot of intended exchange/investment platform
+- Communication history with person/company receiving crypto
+- Government-issued ID verification
+- Proof of address
+- Source of funds documentation
+- Written acknowledgment of crypto risks
+
+REGULATORY COMPLIANCE
+
+UNITED STATES:
+- FinCEN Money Services Business (MSB) requirements
+- Bank Secrecy Act (BSA) compliance
+- Currency Transaction Reports (CTR) for $10K+
+- Suspicious Activity Reports (SAR) for suspicious patterns
+- OFAC sanctions screening
+
+EUROPEAN UNION:
+- 5th Anti-Money Laundering Directive (5AMLD)
+- Travel Rule for crypto transfers >€1,000
+- Market Abuse Regulation (MAR)
+- GDPR for customer data
+
+UNITED KINGDOM:
+- FCA registration mandatory
+- Money Laundering Regulations 2017
+- Travel Rule compliance
+- Customer due diligence requirements
+
+CANADA:
+- FINTRAC Money Services Business registration
+- Proceeds of Crime (Money Laundering) and Terrorist Financing Act
+- Know Your Client and transaction reporting
+
+FATF GUIDANCE:
+- Virtual Asset Service Providers (VASPs) regulation
+- Travel Rule implementation globally
+- Risk-based approach to crypto transactions
+- Information sharing between jurisdictions
+
+TRAVEL RULE COMPLIANCE:
+For crypto transfers exceeding threshold ($1,000 USD or equivalent):
+- Originator information (name, address, account)
+- Beneficiary information
+- Exchange information
+- Purpose of transaction
+- Transmitted to receiving exchange
+
+AUTOMATED BLOCKING CRITERIA
+
+AUTOMATIC BLOCK (No review needed):
+1. Unlicensed exchange in strict regulatory jurisdiction
+2. Exchange on known scam list
+3. Transaction to sanctioned entity (OFAC)
+4. Customer explicitly states pressure/scam keywords
+5. Multiple fraud indicators score > 0.95
+
+HOLD FOR REVIEW:
+1. Risk score 0.80-0.95
+2. First-time crypto purchaser with amount > $5,000
+3. Elderly customer with amount > $2,000
+4. Recent account takeover indicators
+5. Failed verification attempts
+
+ALLOW WITH MONITORING:
+1. Licensed exchange, established customer, score < 0.70
+2. Small amount (< $500), low-risk exchange
+3. Customer has successful crypto history
+4. Business account with documented crypto operations
+
+CUSTOMER EDUCATION
+
+When blocking crypto transaction, provide:
+
+EDUCATIONAL CONTENT:
+- Common crypto scams and how to spot them
+- Irreversible nature of crypto transactions
+- How to verify exchange legitimacy
+- Red flags for investment fraud
+- Resources: FTC, FBI IC3, state attorney general
+
+ALTERNATIVE ACTIONS:
+- Recommend licensed exchanges (Coinbase, Kraken, etc.)
+- Suggest smaller initial purchase to test ($100-$500)
+- Encourage verification of recipient
+- Wait 24 hours and reconsider (cooling-off period)
+- Consult with trusted family member or financial advisor
+
+REPORTING RESOURCES:
+- FBI Internet Crime Complaint Center (IC3): ic3.gov
+- FTC Crypto Scam Reporting: reportfraud.ftc.gov
+- State attorney general offices
+- Better Business Bureau scam tracker
+- Local law enforcement for large losses
+
+INTEGRATION WITH OTHER RULES
+
+RELATED RULES:
+- GLOBAL-001: High-value transaction review (overlap at $10K)
+- GLOBAL-003: Gambling monitoring (crypto often used for online gambling)
+- Regional ATO rules: Account takeover may target crypto purchases
+- Velocity rules: Multiple crypto purchases may indicate testing/laundering
+
+CROSS-VENDOR COORDINATION:
+- Share blocked merchant lists across payment providers
+- Industry collaboration on crypto fraud patterns
+- Real-time exchange reputation databases
+- Regulatory body coordination
+
+PERFORMANCE METRICS
+
+TARGET METRICS:
+- Scam Prevention Rate: > 75% (stop fraud before completion)
+- False Positive Rate: < 20% (accept higher rate for customer protection)
+- Customer Education: 90% receive educational materials when blocked
+- Recovery Rate: < 5% (once crypto sent, usually unrecoverable)
+- Regulatory Compliance: 100% of SAR requirements met
+- Response Time: < 30 minutes for review
+
+MEASURED OUTCOMES:
+- Dollar amount of fraud prevented
+- Number of customers educated
+- SARs filed and investigations supported
+- Regulatory compliance audit results
+- Customer feedback on education materials
+
+SPECIAL CONSIDERATIONS
+
+LEGITIMATE CRYPTO USE CASES:
+- Remittances (lower fees than traditional services)
+- International payments (especially in countries with currency controls)
+- Store of value / investment (similar to gold)
+- DeFi (Decentralized Finance) participation
+- NFT purchases (emerging use case)
+- Business operations for crypto-related companies
+
+These legitimate uses require different treatment:
+- Established pattern of legitimate crypto use
+- Business account with documented crypto operations
+- Lower risk scores for repeat users
+- Documented legitimate purpose
+
+PRIVACY COINS:
+Monero (XMR), Zcash (ZEC), Dash present additional risks:
+- Enhanced anonymity features
+- Harder to trace
+- Often used for illicit purposes
+- Many exchanges delisting privacy coins
+- Additional scrutiny required
+
+DECENTRALIZED EXCHANGES (DEX):
+- No central authority
+- Harder to regulate
+- Less customer protection
+- Often no KYC requirements
+- Higher fraud risk
+
+COLD WALLETS VS. EXCHANGE CUSTODY:
+- Cold wallet transfers (customer holds private keys): higher risk of loss
+- Exchange custody (exchange holds keys): some customer protection
+- Educational materials should address custody risks
+
+This rule balances legitimate crypto adoption with strong protections against the high fraud risks in the cryptocurrency ecosystem.

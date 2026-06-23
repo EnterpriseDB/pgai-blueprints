@@ -1,0 +1,56 @@
+{
+  "stores": [
+    {"store_id": 1, "store_name": "Downtown Store", "address": "100 Main Street, Chicago, IL", "phone": "+1-555-3001", "manager": "Michael Clark", "opening_date": "2020-01-15"},
+    {"store_id": 2, "store_name": "Mall Location", "address": "200 Shopping Center, Chicago, IL", "phone": "+1-555-3002", "manager": "Susan White", "opening_date": "2019-06-20"},
+    {"store_id": 3, "store_name": "Suburban Branch", "address": "300 Oak Park Ave, Oak Park, IL", "phone": "+1-555-3003", "manager": "Robert Green", "opening_date": "2021-03-10"},
+    {"store_id": 4, "store_name": "Airport Store", "address": "400 Airport Blvd, Chicago, IL", "phone": "+1-555-3004", "manager": "Linda Brown", "opening_date": "2020-11-05"}
+  ],
+  "suppliers": [
+    {"supplier_id": 1, "supplier_name": "FreshProduce Inc", "contact_person": "John Miller", "phone": "+1-555-4001", "email": "john@freshproduce.com", "address": "500 Farm Road, Springfield, IL"},
+    {"supplier_id": 2, "supplier_name": "Daily Goods Co", "contact_person": "Mary Johnson", "phone": "+1-555-4002", "email": "mary@dailygoods.com", "address": "600 Industrial Dr, Peoria, IL"},
+    {"supplier_id": 3, "supplier_name": "Electronics Plus", "contact_person": "Steve Wilson", "phone": "+1-555-4003", "email": "steve@electronicsplus.com", "address": "700 Tech Park, Naperville, IL"},
+    {"supplier_id": 4, "supplier_name": "Fashion Forward", "contact_person": "Jennifer Lee", "phone": "+1-555-4004", "email": "jennifer@fashionforward.com", "address": "800 Design St, Evanston, IL"}
+  ],
+  "product_categories": [
+    {"category_id": 1, "category_name": "Groceries", "description": "Food and beverage items"},
+    {"category_id": 2, "category_name": "Electronics", "description": "Electronic devices and accessories"},
+    {"category_id": 3, "category_name": "Clothing", "description": "Apparel and fashion items"},
+    {"category_id": 4, "category_name": "Health & Beauty", "description": "Personal care and cosmetic products"},
+    {"category_id": 5, "category_name": "Home & Garden", "description": "Household and garden items"}
+  ],
+  "products": [
+    {"product_id": 1, "category_id": 1, "supplier_id": 1, "product_name": "Organic Apples", "description": "Fresh organic apples", "unit_price": 3.99, "cost_price": 2.50, "barcode": "1234567890123"},
+    {"product_id": 2, "category_id": 1, "supplier_id": 1, "product_name": "Whole Wheat Bread", "description": "Freshly baked whole wheat bread", "unit_price": 2.99, "cost_price": 1.80, "barcode": "1234567890124"},
+    {"product_id": 3, "category_id": 1, "supplier_id": 2, "product_name": "Milk Gallon", "description": "Fresh whole milk", "unit_price": 4.49, "cost_price": 3.20, "barcode": "1234567890125"},
+    {"product_id": 4, "category_id": 2, "supplier_id": 3, "product_name": "Bluetooth Speaker", "description": "Portable wireless speaker", "unit_price": 79.99, "cost_price": 45.00, "barcode": "1234567890126"},
+    {"product_id": 5, "category_id": 2, "supplier_id": 3, "product_name": "Phone Charger", "description": "Universal USB phone charger", "unit_price": 19.99, "cost_price": 8.50, "barcode": "1234567890127"},
+    {"product_id": 6, "category_id": 3, "supplier_id": 4, "product_name": "Cotton T-Shirt", "description": "Basic cotton t-shirt", "unit_price": 14.99, "cost_price": 7.00, "barcode": "1234567890128"},
+    {"product_id": 7, "category_id": 4, "supplier_id": 2, "product_name": "Shampoo", "description": "Premium hair shampoo", "unit_price": 8.99, "cost_price": 4.50, "barcode": "1234567890129"}
+  ],
+  "inventory": [
+    {"inventory_id": 1, "store_id": 1, "product_id": 1, "quantity_on_hand": 150, "reorder_level": 30, "max_stock_level": 200, "last_restocked": "2024-01-10"},
+    {"inventory_id": 2, "store_id": 1, "product_id": 2, "quantity_on_hand": 80, "reorder_level": 20, "max_stock_level": 100, "last_restocked": "2024-01-12"},
+    {"inventory_id": 3, "store_id": 1, "product_id": 3, "quantity_on_hand": 120, "reorder_level": 25, "max_stock_level": 150, "last_restocked": "2024-01-14"},
+    {"inventory_id": 4, "store_id": 2, "product_id": 4, "quantity_on_hand": 25, "reorder_level": 5, "max_stock_level": 50, "last_restocked": "2024-01-08"},
+    {"inventory_id": 5, "store_id": 2, "product_id": 5, "quantity_on_hand": 40, "reorder_level": 10, "max_stock_level": 60, "last_restocked": "2024-01-11"},
+    {"inventory_id": 6, "store_id": 3, "product_id": 6, "quantity_on_hand": 60, "reorder_level": 15, "max_stock_level": 80, "last_restocked": "2024-01-09"},
+    {"inventory_id": 7, "store_id": 4, "product_id": 7, "quantity_on_hand": 35, "reorder_level": 10, "max_stock_level": 50, "last_restocked": "2024-01-13"}
+  ],
+  "sales": [
+    {"sale_id": 1, "store_id": 1, "sale_date": "2024-01-15", "total_amount": 15.97, "payment_method": "cash", "cashier_id": "EMP001"},
+    {"sale_id": 2, "store_id": 1, "sale_date": "2024-01-15", "total_amount": 7.98, "payment_method": "credit_card", "cashier_id": "EMP002"},
+    {"sale_id": 3, "store_id": 2, "sale_date": "2024-01-16", "total_amount": 99.98, "payment_method": "debit_card", "cashier_id": "EMP003"},
+    {"sale_id": 4, "store_id": 3, "sale_date": "2024-01-17", "total_amount": 29.98, "payment_method": "cash", "cashier_id": "EMP004"},
+    {"sale_id": 5, "store_id": 4, "sale_date": "2024-01-18", "total_amount": 8.99, "payment_method": "credit_card", "cashier_id": "EMP005"}
+  ],
+  "sale_items": [
+    {"sale_item_id": 1, "sale_id": 1, "product_id": 1, "quantity": 2, "unit_price": 3.99, "total_price": 7.98},
+    {"sale_item_id": 2, "sale_id": 1, "product_id": 2, "quantity": 1, "unit_price": 2.99, "total_price": 2.99},
+    {"sale_item_id": 3, "sale_id": 1, "product_id": 3, "quantity": 1, "unit_price": 4.49, "total_price": 4.49},
+    {"sale_item_id": 4, "sale_id": 2, "product_id": 1, "quantity": 2, "unit_price": 3.99, "total_price": 7.98},
+    {"sale_item_id": 5, "sale_id": 3, "product_id": 4, "quantity": 1, "unit_price": 79.99, "total_price": 79.99},
+    {"sale_item_id": 6, "sale_id": 3, "product_id": 5, "quantity": 1, "unit_price": 19.99, "total_price": 19.99},
+    {"sale_item_id": 7, "sale_id": 4, "product_id": 6, "quantity": 2, "unit_price": 14.99, "total_price": 29.98},
+    {"sale_item_id": 8, "sale_id": 5, "product_id": 7, "quantity": 1, "unit_price": 8.99, "total_price": 8.99}
+  ]
+}

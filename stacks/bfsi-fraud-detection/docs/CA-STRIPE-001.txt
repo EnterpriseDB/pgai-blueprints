@@ -1,0 +1,457 @@
+Fraud Detection Rule: CA-STRIPE-001
+Rule Name: Canada Transaction Monitoring
+Region: Canada (CA)
+Payment Vendor: Stripe
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors Stripe transactions originating from or processed in Canada, with considerations for Canadian regulatory requirements, bilingual fraud patterns (English/French), cross-border transactions with the US, and fraud types specific to the Canadian market.
+
+RULE PARAMETERS
+- Threshold Amount: CAD $4,500 (approximately USD $3,300)
+- Risk Score Threshold: 0.70
+- Action: Review (mandatory review before processing)
+- Category: Transaction Limit
+- Regulatory Framework: FINTRAC and provincial consumer protection laws
+
+RULE DESCRIPTION
+Canadian consumers and merchants operate in a unique environment with strong federal and provincial regulations, close economic ties to the US, bilingual requirements in many contexts, and specific fraud patterns. This rule provides specialized monitoring adapted for the Canadian market.
+
+CANADIAN-SPECIFIC CONSIDERATIONS
+
+REGULATORY ENVIRONMENT:
+- FINTRAC (Financial Transactions and Reports Analysis Centre of Canada)
+- Proceeds of Crime (Money Laundering) and Terrorist Financing Act (PCMLTFA)
+- Provincial consumer protection acts (vary by province)
+- Competition Bureau oversight
+- Privacy Commissioner (PIPEDA - Personal Information Protection and Electronic Documents Act)
+- Provincial securities regulators
+
+BILINGUAL REQUIREMENTS:
+- Quebec: French language requirements for consumer communications
+- Federal: Services available in both English and French
+- Fraud alerts and educational materials in both languages
+- Bilingual scam detection (phishing emails in both languages)
+
+CURRENCY CONSIDERATIONS:
+- Primary currency: CAD ($)
+- Frequent USD transactions (especially near border)
+- Currency conversion monitoring
+- Cross-border shopping common (especially before pandemic)
+- Lower CAD value means higher nominal amounts
+
+TRIGGERING CONDITIONS
+
+This rule triggers when:
+1. Stripe transaction from Canadian account ≥ CAD $4,500
+2. Transaction involves Canadian card or merchant
+3. Fraud risk score ≥ 0.70
+4. Cross-border transaction with elevated risk
+
+OR special conditions:
+5. US cross-border transaction with suspicious patterns
+6. First international transaction over CAD $2,000
+7. Province-specific fraud pattern detected
+8. Bilingual phishing/scam indicators
+
+RISK SCORE CALCULATION
+
+BASE CANADIAN RISK: 0.15
+Lower baseline due to lower overall fraud rates in Canada
+
+CROSS-BORDER FACTORS (+0.00 to +0.35):
+- Transaction to high-risk country (not US): +0.35
+- First US cross-border purchase: +0.10
+- Package forwarding service: +0.15
+- Transaction outside Canada/US: +0.25
+- Suspicious international merchant: +0.30
+
+TRANSACTION CHARACTERISTICS (+0.00 to +0.30):
+- Amount 3x+ customer average: +0.20
+- High-risk merchant category: +0.20
+- Multiple currency conversions: +0.15
+- Gift card or cash equivalent: +0.20
+- Unusual merchant for customer: +0.15
+
+CUSTOMER INDICATORS (+0.00 to +0.30):
+- New account (< 60 days): +0.20
+- Recent account changes: +0.15
+- No transaction history: +0.15
+- Multiple failed payment attempts: +0.20
+- Unverified Canadian address: +0.20
+
+REGIONAL VARIATIONS (+0.00 to +0.20):
+- Quebec transaction (higher fraud rate): +0.05
+- GTA (Greater Toronto Area) - higher volume, more fraud: +0.05
+- Remote northern region (unusual pattern): +0.10
+- Province known for specific scam type: +0.10
+
+Example Score:
+- Base risk: 0.15
+- Amount 4x average: +0.20
+- US package forwarder: +0.15
+- High-risk merchant: +0.20
+- Quebec location: +0.05
+- Multiple failed attempts: +0.20
+- Total: 0.95 → BLOCK and review
+
+FRAUD SCENARIOS SPECIFIC TO CANADA
+
+SCENARIO 1: CRA TAX SCAM
+Description: Scammers impersonate Canada Revenue Agency demanding immediate payment.
+
+Pattern:
+- Threatening call or email from "CRA"
+- Claims of back taxes or audit
+- Demands immediate payment
+- Threats of arrest, deportation, or liens
+- Requests payment via unusual method (iTunes cards historically, now more sophisticated)
+- May use spoofed CRA phone numbers
+
+Example:
+- Customer: New immigrant in Toronto
+- Contact: Phone call from spoofed CRA number
+- Demand: CAD $6,800 in back taxes
+- Payment method: Stripe payment to "CRA Settlement Services"
+- Threats: Deportation, immediate arrest
+- Red flags: Real CRA doesn't demand immediate payment, doesn't threaten arrest
+- Risk Score: 0.95
+- Action: BLOCK transaction, educate customer about CRA scams, report to Canadian Anti-Fraud Centre
+
+SCENARIO 2: SERVICE CANADA / EI PHISHING
+Description: Scam targeting EI (Employment Insurance) recipients and seniors (CPP/OAS).
+
+Post-Pandemic Context:
+- Increased EI/CERB claims during pandemic
+- Confusion about legitimate government communications
+- Scammers exploit this confusion
+
+Pattern:
+- Email/text claiming EI payment issue
+- Requests "verification" via payment
+- Or claims overpayment must be returned immediately
+- Links to fake Service Canada site
+- Requests payment via credit card/Stripe
+
+Example:
+- Customer: Receiving EI benefits
+- Phishing: "Service Canada" email claiming account suspended
+- Demand: Pay CAD $500 "reactivation fee"
+- Red flags: Government doesn't request fees via email/payment processors
+- Risk Score: 0.88
+- Action: BLOCK, educate about government phishing, report to Canadian Anti-Fraud Centre
+
+SCENARIO 3: CROSS-BORDER SHOPPING FRAUD
+Description: Scams targeting Canadians shopping from US merchants.
+
+Pattern:
+- Fake US merchant website
+- Prices in USD (appears cheaper to Canadians)
+- Promise delivery to Canada
+- Takes payment, never delivers
+- Or delivers counterfeit goods
+- May use package forwarding scam
+
+Example:
+- Customer: Vancouver resident shopping for electronics
+- Merchant: Fake "US Electronics Outlet"
+- Transaction: USD $2,000 (CAD $2,700) for laptop
+- Red flags: Website 3 weeks old, no reviews, price too good
+- Package forwarding to Canadian address
+- Risk Score: 0.82
+- Action: HOLD transaction, verify merchant legitimacy, check for other complaints
+
+SCENARIO 4: QUEBEC LANGUAGE-SPECIFIC SCAM
+Description: Scams specifically targeting French-speaking Quebecers.
+
+Pattern:
+- Professionally written French phishing
+- Impersonates Revenu Québec (provincial tax agency)
+- Or Hydro-Québec (electricity company)
+- Or desjardins (major credit union)
+- Cultural references that appear legitimate
+- Preys on language preference/comfort
+
+Example:
+- Customer: Elderly francophone in Montreal
+- Phishing: Email in French from "Revenu Québec"
+- Claim: Tax refund of CAD $1,200 available
+- Request: "Verification fee" of CAD $150
+- Red flags: Government doesn't charge fees for refunds
+- Risk Score: 0.85
+- Action: BLOCK, provide French-language scam education, report to SQ (Sûreté du Québec)
+
+SCENARIO 5: ROMANCE SCAM (CANADIAN VARIATION)
+Description: Online romance scam with Canadian-specific elements.
+
+Pattern:
+- Meets victim on Canadian dating site (POF, eHarmony)
+- Claims to be Canadian working abroad (military, oil rig, UN)
+- Eventually needs money for emergency
+- May claim to need funds to return to Canada
+- Exploits Canadian politeness and trust
+
+Example:
+- Customer: 62-year-old in Calgary
+- Story: Met "Canadian Forces member" online
+- Stationed "in Syria on peacekeeping mission"
+- Emergency: Needs CAD $8,000 for medical bills
+- Red flags: Never met in person, quick escalation, emergency funds request
+- Risk Score: 0.92
+- Action: BLOCK, educate about romance scams, provide support resources
+
+SCENARIO 6: CRYPTO INVESTMENT SCAM (CANADIAN ANGLE)
+Description: Fake crypto investment platforms targeting Canadians.
+
+Canadian Context:
+- Stricter crypto regulations than US
+- Some Canadians seek offshore platforms
+- Confusion about which platforms are legitimate
+
+Pattern:
+- Promises high returns on crypto
+- Claims to be "Canadian registered" (often false)
+- Targets RRSP/TFSA holders looking for growth
+- Initial small "returns" shown
+- Requests larger investments
+- Unable to withdraw funds
+
+Example:
+- Customer: Toronto professional, age 35
+- Platform: "Maple Crypto Investments"
+- Claims: "Canadian registered, CIRO approved"
+- Transaction: CAD $12,000 "investment"
+- Red flags: Not actually registered, guaranteed returns promised
+- Risk Score: 0.89
+- Action: BLOCK, verify with OSC/CSA, educate about crypto scams
+
+PROVINCIAL VARIATIONS
+
+ONTARIO (ON):
+- Highest population, most fraud volume
+- GTA (Toronto) hotspot for various scams
+- Strong immigrant communities (multilingual scams)
+- Cross-border shopping with US common
+- Service Ontario impersonation scams
+
+QUEBEC (QC):
+- French-language scams
+- Revenu Québec impersonation
+- Hydro-Québec/utility scams
+- Higher fraud rates in some categories
+- Organized crime involvement (Montreal)
+
+BRITISH COLUMBIA (BC):
+- High real estate fraud risk
+- Vancouver money laundering concerns
+- Cross-border with US (package forwarding)
+- Asian-language scams (Mandarin, Cantonese)
+- Romance scams targeting seniors
+
+ALBERTA (AB):
+- Oil and gas employment scams
+- Romance scams (isolated populations)
+- Vehicle purchase fraud (high truck values)
+- Cross-border with US (Montana)
+
+ATLANTIC PROVINCES (NS, NB, PE, NL):
+- Lower population, lower fraud volume
+- Romance scams more common (isolated/rural)
+- EI/fishing industry targeted
+- Senior citizen fraud (aging population)
+
+PRAIRIE PROVINCES (MB, SK):
+- Agricultural equipment fraud
+- First Nations communities targeted
+- Remote/isolated populations vulnerable
+- Lower fraud rates overall
+
+TERRITORIES (YT, NT, NU):
+- Very small populations
+- Remote locations, limited services
+- Indigenous communities targeted
+- High shipping costs (parcel scams)
+
+CROSS-BORDER CONSIDERATIONS (CANADA-US)
+
+LEGITIMATE CROSS-BORDER PATTERNS:
+- US shopping common for Canadians (especially pre-COVID)
+- Package forwarding services legitimate
+- Snowbirds with US addresses
+- Cross-border workers
+- Family in both countries
+
+RED FLAGS:
+- First-time cross-border purchase, high value
+- Multiple shipping addresses in US
+- Package forwarding to residential address
+- Merchant unknown/suspicious
+- Customer can't explain purchase rationale
+
+VERIFICATION STEPS:
+1. Verify US merchant legitimacy
+2. Confirm customer aware of import duties/taxes
+3. Check package forwarding service reputation
+4. Ensure customer has legitimate reason for US purchase
+5. Verify shipping address is valid
+
+IMPORT DUTIES AND TAXES:
+- Packages over CAD $20: duties may apply
+- CBSA (Canada Border Services Agency) collects
+- Courier often charges handling fee
+- Customer should be aware of additional costs
+
+REGULATORY COMPLIANCE
+
+FINTRAC REQUIREMENTS:
+- Money Services Business (MSB) registration if applicable
+- Large Cash Transaction Reports (CAD $10,000+)
+- Suspicious Transaction Reports (STR)
+- Terrorist Property Reports
+- Record keeping requirements
+
+PROCEEDS OF CRIME (MONEY LAUNDERING) AND TERRORIST FINANCING ACT:
+- Know Your Client (KYC) requirements
+- Risk-based approach to customer due diligence
+- Ongoing monitoring obligations
+- Record retention (5 years minimum)
+
+PROVINCIAL CONSUMER PROTECTION:
+- Varies by province
+- Cooling-off periods for certain transactions
+- Refund rights
+- Clear disclosure requirements
+- Language requirements (especially Quebec)
+
+PIPEDA (PRIVACY):
+- Personal Information Protection and Electronic Documents Act
+- Consent requirements for data collection
+- Right to access personal information
+- Data breach notification obligations
+- Cross-border data transfer restrictions
+
+AUTOMATED RESPONSE ACTIONS
+
+WHEN SCORE 0.70-0.80 (Medium-High Risk):
+1. Flag for review by Canadian fraud team
+2. Verify customer identity and address
+3. Check merchant legitimacy
+4. Confirm customer understanding of transaction
+5. Provide educational content about cross-border risks
+6. Verify currency conversion awareness
+
+WHEN SCORE 0.80-0.90 (High Risk):
+1. HOLD transaction for manual approval
+2. Contact customer via verified phone number
+3. Ask targeted questions about transaction
+4. Verify not responding to phishing or scam
+5. Check for pressure/urgency indicators
+6. Consider blocking if customer unresponsive
+
+WHEN SCORE > 0.90 (Critical Risk):
+1. BLOCK transaction immediately
+2. Contact customer with fraud warning (English/French as appropriate)
+3. Provide scam education materials
+4. Report to Canadian Anti-Fraud Centre if appropriate
+5. Consider account review
+6. Document for future pattern analysis
+
+CUSTOMER COMMUNICATION
+
+ENGLISH VERSION:
+"We've held this transaction for your protection. Before proceeding, please verify:
+
+✓ You initiated this transaction
+✓ The merchant is legitimate
+✓ You understand any cross-border fees (if applicable)
+✓ You're not responding to an unexpected call, email, or text
+✓ You're not being pressured to make this payment
+
+Government agencies (CRA, Service Canada) never demand immediate payment by credit card or threaten arrest. If you have concerns, contact the Canadian Anti-Fraud Centre: 1-888-495-8501."
+
+FRENCH VERSION (FOR QUEBEC):
+"Nous avons retenu cette transaction pour votre protection. Avant de continuer, veuillez vérifier:
+
+✓ Vous avez initié cette transaction
+✓ Le commerçant est légitime
+✓ Vous comprenez tous les frais transfrontaliers (le cas échéant)
+✓ Vous ne répondez pas à un appel, courriel ou SMS inattendu
+✓ Vous n'êtes pas sous pression pour effectuer ce paiement
+
+Les agences gouvernementales (ARC, Service Canada, Revenu Québec) ne demandent jamais de paiement immédiat par carte de crédit et ne menacent pas d'arrestation. Si vous avez des préoccupations, contactez le Centre antifraude du Canada: 1-888-495-8501."
+
+INTEGRATION WITH CANADIAN SYSTEMS
+
+CANADIAN ANTI-FRAUD CENTRE (CAFC):
+- Report suspected fraud
+- Access fraud intelligence
+- Victim support resources
+- Real-time scam alerts
+- Partnership with RCMP and OPP
+
+CREDIT BUREAUS:
+- Equifax Canada
+- TransUnion Canada
+- Identity verification
+- Fraud alerts and credit freezes
+
+FINTRAC:
+- Report suspicious transactions
+- Access to financial intelligence
+- Terrorist financing monitoring
+- Money laundering detection
+
+PROVINCIAL POLICE:
+- RCMP (federal/rural)
+- OPP (Ontario Provincial Police)
+- SQ (Sûreté du Québec)
+- Municipal police forces
+
+EXAMPLES
+
+Example 1 - Legitimate Cross-Border Purchase (APPROVE):
+- Customer: Established account, Toronto
+- Transaction: USD $1,800 (CAD $2,430) camera from B&H Photo (NYC)
+- History: Previous cross-border purchases
+- Verification: Customer aware of duties, legitimate merchant
+- Risk Score: 0.45
+- Action: APPROVE with customs advisory
+
+Example 2 - CRA Scam (BLOCK):
+- Customer: New immigrant, Brampton
+- Transaction: CAD $5,500 to "CRA Collections"
+- Red flags: Government impersonation, threats, urgency
+- Risk Score: 0.96
+- Action: BLOCK immediately, educate about CRA scams, report to CAFC
+
+Example 3 - Romance Scam (BLOCK):
+- Customer: Senior in Halifax
+- Transaction: CAD $10,000 to individual in UK
+- Story: "Emergency medical funds" for online romantic partner
+- Red flags: Never met in person, large amount, emotional pressure
+- Risk Score: 0.94
+- Action: BLOCK, provide romance scam resources, contact family if possible, report to CAFC
+
+RELATED RULES
+- GLOBAL-001: High-value threshold (overlaps at CAD $13,500/USD $10K)
+- US-STRIPE-001: Cross-border coordination
+- CA-PAYPAL-001: Cross-vendor Canadian protection
+
+PERFORMANCE METRICS
+- CRA Scam Prevention: > 90%
+- Cross-Border Fraud Detection: > 70%
+- False Positive Rate: < 15%
+- Bilingual Communication: 100% coverage for Quebec
+- Average Review Time: < 30 minutes
+- Customer Education Rate: 85% receive educational materials
+
+TRAINING REQUIREMENTS
+Canadian fraud analysts must complete:
+- FINTRAC regulations and reporting
+- CRA and Service Canada scam identification
+- Bilingual communication (Quebec operations)
+- Provincial variations in consumer protection
+- Cross-border transaction verification
+- Canadian Anti-Fraud Centre coordination
+- Cultural sensitivity for diverse Canadian population
+- Indigenous community considerations

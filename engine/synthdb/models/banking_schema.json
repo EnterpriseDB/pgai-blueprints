@@ -1,0 +1,21 @@
+{
+  "model_name": "banking",
+  "description": "Core Banking System",
+  "tables": {
+    "branches": {"primary_key": "branch_id"},
+    "account_types": {"primary_key": "account_type_id"},
+    "customers": {"primary_key": "customer_id", "foreign_keys": {"branch_id": "branches.branch_id"}},
+    "accounts": {"primary_key": "account_id", "foreign_keys": {"customer_id": "customers.customer_id", "account_type_id": "account_types.account_type_id", "branch_id": "branches.branch_id"}},
+    "transactions": {"primary_key": "transaction_id", "foreign_keys": {"account_id": "accounts.account_id"}},
+    "loans": {"primary_key": "loan_id", "foreign_keys": {"customer_id": "customers.customer_id", "branch_id": "branches.branch_id"}}
+  },
+  "relationships": [
+    {"parent": "branches", "child": "customers"},
+    {"parent": "branches", "child": "accounts"},
+    {"parent": "branches", "child": "loans"},
+    {"parent": "account_types", "child": "accounts"},
+    {"parent": "customers", "child": "accounts"},
+    {"parent": "customers", "child": "loans"},
+    {"parent": "accounts", "child": "transactions"}
+  ]
+}

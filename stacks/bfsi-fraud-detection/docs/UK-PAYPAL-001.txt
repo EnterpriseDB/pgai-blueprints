@@ -1,0 +1,427 @@
+Fraud Detection Rule: UK-PAYPAL-001
+Rule Name: UK PayPal Cross-Border Detection
+Region: United Kingdom (UK)
+Payment Vendor: PayPal
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors PayPal transactions originating from the UK with special focus on cross-border transactions, post-Brexit payment complications, and fraud patterns specific to UK PayPal users. The rule addresses both domestic UK fraud and international transaction risks.
+
+RULE PARAMETERS
+- Threshold Amount: £2,500 GBP (approximately $3,100 USD)
+- Risk Score Threshold: 0.70
+- Action: Alert (flag for review with possible hold)
+- Category: Cross-Border Transaction Monitoring
+- Post-Brexit Focus: EU transactions now treated as international
+
+RULE DESCRIPTION
+UK PayPal users face unique challenges and risks following Brexit, including currency conversion issues, customs complications, and increased fraud targeting cross-border transactions. This rule provides specialized monitoring for these scenarios while maintaining protection against traditional PayPal fraud.
+
+UK-SPECIFIC PAYPAL CONSIDERATIONS
+
+POST-BREXIT CHANGES:
+- UK-EU transactions now cross-border (previously domestic EEA)
+- Additional customs declarations required
+- VAT and duty implications
+- Currency conversion (GBP to EUR) more common
+- Longer delivery times may be normal
+- "EU Exit" customs charges affecting buyers
+
+PAYPAL UK REGULATIONS:
+- FCA regulation as e-money institution
+- Payment Services Regulations 2017 compliance
+- Strong Customer Authentication (SCA) under PSD2
+- Consumer protection under UK law
+- Chargeback rights and PayPal Buyer Protection
+
+CURRENCY HANDLING:
+- Primary currency: GBP (£)
+- Secondary: EUR for EU transactions, USD for US
+- Dynamic Currency Conversion (DCC) monitoring
+- Multi-currency accounts common among UK users
+- Exchange rate dispute prevention
+
+TRIGGERING CONDITIONS
+
+This rule triggers when:
+1. PayPal transaction from UK account ≥ £2,500
+2. Cross-border transaction with elevated risk indicators
+3. Fraud risk score ≥ 0.70
+4. Post-Brexit complications present
+
+OR any of these special conditions:
+5. First international transaction over £1,000
+6. Rapid sequence of international payments
+7. Transaction to high-risk country
+8. Significant currency conversion involved
+9. Customs/VAT red flags
+
+RISK SCORE CALCULATION
+
+BASE UK PAYPAL RISK: 0.20
+Standard baseline for UK PayPal transactions
+
+CROSS-BORDER FACTORS (+0.00 to +0.40):
+- Transaction to high-risk country: +0.40
+- First international payment: +0.15
+- EU transaction with Brexit complications: +0.10
+- Outside UK/EU/US: +0.20
+- Country with high fraud rate: +0.30
+- Suspicious shipping address: +0.20
+
+TRANSACTION CHARACTERISTICS (+0.00 to +0.30):
+- Amount significantly higher than history: +0.20
+- Unusual merchant category for customer: +0.15
+- Gift payment vs. goods/services: +0.10
+- "Friends and Family" for commercial transaction: +0.25
+- Multiple currency conversions: +0.10
+- No buyer protection applied: +0.15
+
+CUSTOMER INDICATORS (+0.00 to +0.30):
+- New PayPal account (< 90 days): +0.20
+- No transaction history: +0.15
+- Recent password change: +0.15
+- New payment method just added: +0.20
+- Unverified account: +0.25
+
+TIMING AND BEHAVIOR (+0.00 to +0.20):
+- Unusual hour for customer: +0.10
+- Multiple failed payment attempts: +0.15
+- Rushed delivery request: +0.10
+- VPN or proxy detected: +0.20
+- New device/location: +0.15
+
+Example Score:
+- Base risk: 0.20
+- EU transaction, Brexit complications: +0.10
+- First international over £1,000: +0.15
+- Amount 3x customer average: +0.20
+- New shipping address: +0.20
+- Total: 0.85 → TRIGGER ALERT
+
+FRAUD SCENARIOS SPECIFIC TO UK PAYPAL
+
+SCENARIO 1: BREXIT-RELATED PURCHASE SCAM
+Description: Scammers exploit confusion around post-Brexit customs and VAT charges.
+
+Pattern:
+- Customer orders from EU seller
+- Receives unexpected customs/VAT charge
+- Scammer impersonates customs/courier
+- Requests additional payment via PayPal
+- Parcel is fake or charge is fraudulent
+
+Example:
+- Customer: UK buyer, purchased item from Germany
+- Scam: Email claiming £150 customs charge must be paid
+- Red flags: PayPal payment to individual (not official customs), pressure tactics
+- Risk Score: 0.85
+- Action: BLOCK payment, educate customer about legitimate customs procedures, report phishing
+
+SCENARIO 2: CURRENCY CONVERSION FRAUD
+Description: Merchant manipulates currency conversion to overcharge customer.
+
+Pattern:
+- Transaction in foreign currency (EUR or USD)
+- Dynamic Currency Conversion (DCC) applied
+- Unfavorable exchange rate (sometimes 5-10% worse)
+- Customer doesn't realize they're being overcharged
+- Or scammer adds hidden currency conversion fees
+
+Example:
+- Transaction: £2,000 purchase from EU merchant
+- Conversion: Merchant charges €2,500 (poor rate)
+- Real rate: Should be €2,350
+- Loss: £130 to customer via poor conversion
+- Risk Score: 0.65
+- Action: ALERT customer to currency conversion issue, suggest disputing charges
+
+SCENARIO 3: FAKE EU SELLER / NON-DELIVERY
+Description: Scammer poses as EU seller, takes payment, never delivers goods.
+
+Post-Brexit Angle:
+- Longer delivery times expected (customs delays)
+- Buyer waits longer before suspecting fraud
+- Scammer uses "Brexit delays" as excuse
+- By the time fraud is clear, dispute window may be closing
+
+Example:
+- Customer: Orders luxury handbag from "Paris boutique"
+- Payment: £3,200 via PayPal goods and services
+- Seller: Provides fake tracking number
+- Reality: No such boutique exists, no item shipped
+- Delay tactic: "Customs hold-up due to Brexit"
+- Risk Score: 0.78
+- Action: Review merchant legitimacy, check for other complaints, hold payment if suspicious
+
+SCENARIO 4: OVERPAYMENT SCAM (UK VARIATION)
+Description: Scammer "accidentally" overpays and requests refund difference.
+
+UK Angle:
+- Often targets UK sellers on eBay, Gumtree, Facebook Marketplace
+- Fake PayPal payment notification email
+- Payment is fraudulent but appears real
+- Seller refunds "overpayment" from their own funds
+- Original payment bounces/reverses
+
+Example:
+- UK Seller: Listing laptop for £800
+- Scammer: Sends £1,200, claims accident
+- Request: Refund £400 difference
+- Reality: Original £1,200 payment is fraudulent
+- Risk Score: 0.90
+- Action: BLOCK refund transaction, alert seller, investigate original payment
+
+SCENARIO 5: AUTHORISED PUSH PAYMENT VIA PAYPAL
+Description: Victim tricked into sending money via PayPal (UK-specific fraud type).
+
+Common Stories:
+- HMRC tax scam (owe back taxes)
+- Bank impersonation (move money to safe account)
+- Romance scam (online partner needs emergency funds)
+- Investment opportunity (send deposit)
+- Family member emergency (grandchild arrested, needs bail)
+
+Example:
+- Customer: 68-year-old from Birmingham
+- Call: Claims to be from HMRC
+- Claim: £5,500 owed in back taxes, immediate payment needed
+- Request: Send via PayPal to avoid prosecution
+- Red flags: Urgency, government agency requesting PayPal, threats
+- Risk Score: 0.95
+- Action: BLOCK transaction, contact customer, educate about HMRC scams, report to Action Fraud
+
+SCENARIO 6: HOLIDAY ACCOMMODATION SCAM
+Description: Fake holiday rentals targeting UK travelers post-pandemic.
+
+Pattern:
+- Listing on legitimate site or social media
+- Price too good to be true
+- Requests payment via PayPal "Friends and Family" (no protection)
+- Property doesn't exist or isn't actually for rent
+- Common for EU holidays, especially Spain, France, Italy
+
+Example:
+- Customer: Family booking villa in Spain
+- Listing: £3,000 for week in July
+- Payment method: PayPal Friends and Family requested
+- Red flags: Won't accept goods/services payment, no reviews, pressure to book
+- Risk Score: 0.82
+- Action: ALERT customer, recommend goods/services payment only, verify property legitimacy
+
+CROSS-BORDER TRANSACTION VERIFICATION
+
+HIGH-RISK DESTINATION COUNTRIES:
+Transactions to these countries get additional scrutiny:
+- Nigeria, Ghana (419 scams, overpayment scams)
+- Russia, Ukraine (current geopolitical risks)
+- China (counterfeit goods, non-delivery)
+- Romania, Bulgaria (card fraud, phishing)
+- India, Pakistan (tech support scams, overpayment)
+
+MEDIUM-RISK:
+- Any country outside UK/EU/US/Canada/Australia
+- Countries with weak consumer protection laws
+- Jurisdictions with poor PayPal dispute resolution
+
+LOW-RISK:
+- UK domestic transactions
+- US, Canada, Australia
+- Western European countries (despite Brexit)
+- Japan, South Korea, Singapore
+
+VERIFICATION PROCEDURES:
+
+For high-risk international transactions:
+1. Verify merchant legitimacy (website, reviews, registration)
+2. Confirm shipping address is valid and deliverable
+3. Check for merchant history with PayPal
+4. Review customer's explanation for purchase
+5. Verify customer understands import duties/VAT
+6. Ensure proper buyer protection in place
+7. Document customs/tax expectations
+
+PAYPAL BUYER PROTECTION COMPLIANCE
+
+UK LAW INTEGRATION:
+- Consumer Rights Act 2015
+- Consumer Credit Act 1974 (Section 75)
+- Distance Selling Regulations
+- PayPal Buyer Protection overlays these
+
+BUYER PROTECTION COVERS:
+- Item not received
+- Item significantly not as described
+- Unauthorized transaction
+- Eligible items and transactions
+
+NOT COVERED:
+- Friends and Family payments
+- Vehicles, real estate
+- Custom-made items (sometimes)
+- Digital goods (limited coverage)
+- Industrial machinery
+
+This rule ensures proper buyer protection is in place for eligible transactions and alerts customers when protection doesn't apply.
+
+BREXIT-SPECIFIC GUIDANCE
+
+CUSTOMS AND VAT CHANGES:
+Post-Brexit rules for UK-EU transactions:
+- Imports over £135: VAT and customs duty may apply
+- Customs declarations required
+- Longer delivery times normal
+- "EU Exit" security charges common
+- Some couriers charge handling fees
+
+EDUCATIONAL ALERTS:
+When UK customer makes EU purchase:
+"Important: Post-Brexit, this EU purchase may be subject to UK customs charges and VAT upon delivery. These are separate from your PayPal payment and collected by the courier. Typical charges are 20% VAT plus any applicable customs duty. For more information, visit: gov.uk/goods-sent-from-abroad"
+
+MERCHANT REQUIREMENTS:
+EU merchants selling to UK must:
+- Register for UK VAT if threshold exceeded
+- Include VAT in price or disclose it clearly
+- Provide accurate customs information
+- Declare value honestly (underdeclaring is illegal)
+
+STRONG CUSTOMER AUTHENTICATION (SCA)
+
+PSD2 REQUIREMENTS:
+PayPal UK must implement SCA for:
+- Remote payments over £30
+- First transaction with new merchant
+- Adding new payment method
+- Changing payment details
+
+SCA METHODS:
+- PayPal app push notification
+- SMS one-time code
+- Biometric (fingerprint, face ID)
+- Security key
+
+EXEMPTIONS:
+- Low-risk transactions (determined by PayPal)
+- Recurring payments/subscriptions
+- Trusted beneficiaries
+- Low-value (under £30)
+
+This rule monitors for SCA bypass attempts and ensures compliance.
+
+AUTOMATED RESPONSE ACTIONS
+
+WHEN SCORE 0.70-0.80 (Medium-High Risk):
+1. Send alert to fraud team for review
+2. Display educational content to customer about cross-border risks
+3. Verify shipping address is legitimate
+4. Confirm customer understands import charges
+5. Ensure buyer protection applies
+6. Review merchant reputation
+
+WHEN SCORE 0.80-0.90 (High Risk):
+1. HOLD transaction for manual approval
+2. Contact customer to verify intent
+3. Enhanced merchant verification
+4. Check for similar scam reports
+5. Evaluate if "Friends and Family" being misused
+6. Consider blocking if customer unresponsive
+
+WHEN SCORE > 0.90 (Critical Risk):
+1. BLOCK transaction immediately
+2. Contact customer with fraud warning
+3. Provide scam education materials
+4. Report to PayPal fraud team
+5. Consider account review if repeated high-risk attempts
+6. File report with Action Fraud if appropriate
+
+INTEGRATION WITH UK FRAUD PREVENTION
+
+ACTION FRAUD:
+- UK's national fraud reporting center
+- Report APP fraud, purchase scams
+- Share intelligence on fraud patterns
+- Provide reference number for investigations
+
+CIFAS (Credit Industry Fraud Avoidance System):
+- Check for fraud markers on customer
+- Report confirmed fraud for database
+- Cross-industry fraud prevention
+
+TAKE FIVE TO STOP FRAUD:
+UK Finance campaign, integrated messages:
+1. Stop: Take time to think before parting with money
+2. Challenge: Could it be fake? It's ok to reject, refuse or ignore
+3. Protect: Contact your bank immediately if you think you've been scammed
+
+GET SAFE ONLINE:
+- Government-backed cybersecurity advice
+- Resources for online shopping safety
+- How to spot scams
+
+CUSTOMER COMMUNICATION
+
+When blocking cross-border transaction:
+
+"We've held this international PayPal payment for your protection due to the following concerns:
+- [Specific risk factors identified]
+- [Cross-border risks to be aware of]
+
+Before proceeding, please verify:
+✓ The seller is legitimate (check reviews, website, registration)
+✓ You understand the total cost including customs/VAT
+✓ PayPal Buyer Protection applies to this transaction
+✓ The shipping address is correct
+✓ You're not being pressured to complete this payment
+
+For assistance, contact PayPal customer service or call our fraud prevention team at [number]."
+
+Brexit-Specific Warning:
+"This EU purchase may incur additional charges upon delivery to the UK, including 20% VAT and possible customs duty. These charges are separate from your PayPal payment and are collected by the courier. For more information about post-Brexit imports, visit gov.uk/goods-sent-from-abroad"
+
+EXAMPLES
+
+Example 1 - Legitimate EU Purchase (APPROVE):
+- Customer: Established UK PayPal user
+- Transaction: £2,800 camera lens from reputable German retailer
+- Verification: Merchant verified, customer aware of customs, buyer protection applies
+- Risk Score: 0.62
+- Action: APPROVE with Brexit customs advisory
+
+Example 2 - Overpayment Scam (BLOCK):
+- Customer: UK seller on eBay
+- Transaction: £450 refund after £950 "overpayment"
+- Red flags: Original payment suspicious, overpayment claim, pressure tactics
+- Risk Score: 0.92
+- Action: BLOCK refund, educate seller about overpayment scams
+
+Example 3 - Romance Scam (BLOCK):
+- Customer: Recently widowed person from Manchester
+- Transaction: £6,000 to individual in Nigeria
+- Story: "Fiancé" met online, needs emergency funds
+- Red flags: Never met in person, Nigeria (high-risk), large amount, emotional story
+- Risk Score: 0.98
+- Action: BLOCK immediately, contact customer, provide romance scam resources, report to Action Fraud
+
+RELATED RULES
+- UK-STRIPE-001: Cross-vendor UK monitoring
+- GLOBAL-001: High-value threshold (overlaps at £10K/$10K)
+- APP fraud systems (UK-specific)
+- PayPal internal fraud detection
+
+PERFORMANCE METRICS
+- Cross-Border Fraud Detection: > 75%
+- Brexit-Related Scam Prevention: > 80%
+- False Positive Rate: < 18% (acceptable for protection level)
+- Customer Education Rate: 90% receive guidance
+- Average Review Time: < 45 minutes
+
+TRAINING REQUIREMENTS
+UK PayPal fraud analysts must complete:
+- Brexit implications for e-commerce
+- UK consumer protection laws
+- APP fraud identification and intervention
+- PayPal Buyer Protection rules
+- Cross-border transaction verification
+- Currency conversion issues
+- Customs and VAT basics
+- Cultural sensitivity for international transactions

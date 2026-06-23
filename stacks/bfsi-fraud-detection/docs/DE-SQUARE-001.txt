@@ -1,0 +1,489 @@
+Fraud Detection Rule: DE-SQUARE-001
+Rule Name: Germany Square POS Security
+Region: Germany (DE)
+Payment Vendor: Square
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors Square point-of-sale and online transactions in Germany, with specific focus on German merchant regulations, card-present fraud at markets and events, Kartenzahlung (card payment) security, and compliance with German POS requirements.
+
+RULE PARAMETERS
+- Threshold Amount: €3,000 EUR (approximately $3,250 USD)
+- Risk Score Threshold: 0.70
+- Action: Review (merchant and transaction verification)
+- Category: POS Security and Merchant Compliance
+- German Requirements: Kassengesetz (Cash Register Security Ordinance), GoBD
+
+RULE DESCRIPTION
+Square serves small German businesses, market vendors, service providers, and pop-up shops. German regulations for POS systems are among the strictest in the world, including TSE (Technical Security Equipment) requirements for cash register systems. This rule addresses both traditional payment fraud and German-specific compliance requirements.
+
+GERMAN POS REGULATORY ENVIRONMENT
+
+KASSENSICHERUNGSVERORDNUNG (KassenSichV):
+- Cash Register Security Ordinance effective 2020
+- TSE (Technische Sicherheitseinrichtung) mandatory for electronic cash registers
+- Digital receipt requirement
+- Tamper-proof transaction recording
+- Audit trail requirements for Finanzamt (tax office)
+
+GoBD (GRUNDSÄTZE ZUR ORDNUNGSMÄSSIGEN FÜHRUNG UND AUFBEWAHRUNG):
+- Principles for proper management and storage of books, records, and documents
+- Electronic record keeping standards
+- 10-year retention requirement
+- Audit-proof transaction logs
+- Square must comply for German merchants
+
+SEPA CARD PAYMENTS:
+- Girocard (formerly EC-Karte) most common in Germany
+- Credit cards less common than other countries
+- Contactless payment growing (especially post-pandemic)
+- PIN preferred over signature
+- Strong preference for card-present vs. card-not-present
+
+IMPRESSUM REQUIREMENT:
+- Even small businesses need Impressum on website
+- Market vendors with online presence need compliance
+- Missing Impressum is serious red flag
+
+TRIGGERING CONDITIONS
+
+This rule triggers when:
+1. Square transaction from German merchant or customer ≥ €3,000
+2. Transaction involves German card or German Square merchant
+3. Fraud risk score ≥ 0.70
+4. Compliance concerns with German POS regulations
+
+OR special conditions:
+5. Mobile POS at non-fixed location with elevated risk
+6. First high-value transaction (≥ €1,500) on new merchant
+7. Market/event vendor with suspicious patterns
+8. Merchant not compliant with German requirements
+9. Unusual card-present transaction patterns
+
+RISK SCORE CALCULATION
+
+BASE GERMAN SQUARE RISK: 0.20
+Baseline acknowledging small merchant fraud risks
+
+MERCHANT COMPLIANCE (+0.00 to +0.40):
+- No TSE certification (if required): +0.40
+- Missing Impressum (if online presence): +0.30
+- No proper business registration (Gewerbeanmeldung): +0.35
+- Cash-only business suddenly accepting cards: +0.25
+- New merchant (< 90 days): +0.20
+- No physical business location: +0.30
+
+TRANSACTION CHARACTERISTICS (+0.00 to +0.30):
+- Amount >€1,500: +0.15
+- Multiple high-value transactions in short time: +0.25
+- Transaction split to avoid limits: +0.20
+- Foreign card used: +0.15
+- Cash equivalent purchase (gift cards): +0.25
+
+LOCATION AND TIMING (+0.00 to +0.30):
+- Mobile reader location inconsistent: +0.20
+- Market/festival vendor (temporary): +0.15
+- Night transaction (unusual for most German businesses): +0.20
+- Multiple locations in single day (suspicious): +0.25
+- GPS mismatch with registered location: +0.30
+
+CUSTOMER INDICATORS (+0.00 to +0.20):
+- First transaction with merchant: +0.05
+- Multiple failed attempts: +0.20
+- Card from high-risk country: +0.15
+- Unusual for customer profile: +0.10
+
+Example Score:
+- Base risk: 0.20
+- No TSE certification: +0.40
+- Amount €3,500: +0.15
+- Multiple locations one day: +0.25
+- Foreign card: +0.15
+- Total: 1.15 → BLOCK and investigate merchant
+
+FRAUD SCENARIOS SPECIFIC TO GERMAN SQUARE
+
+SCENARIO 1: WOCHENMARKT (WEEKLY MARKET) SKIMMING
+Description: Fraudulent card reader at legitimate German market stall.
+
+German Context:
+- Wochenmarkt (weekly farmers market) very common
+- Many vendors use Square or similar mobile POS
+- Customers trust market vendors
+- Opportunity for card skimming or data theft
+
+Pattern:
+- Fake vendor or compromised reader at market
+- Processes legitimate payment
+- Also captures card data for later fraud
+- Customer doesn't realize until fraudulent charges appear
+
+Example:
+- Location: Viktualienmarkt Munich, Saturday morning
+- Vendor: Fruit and vegetable stand
+- Transaction: €45 for produce (legitimate)
+- Hidden: Card data captured
+- Later: €2,800 fraudulent transaction
+- Risk Score: Detection after fact, pattern of fraud from same market
+- Action: Investigate vendor, coordinate with market authorities, warn customers
+
+SCENARIO 2: FAKE BUSINESS / "BRIEFKASTENFIRMA"
+Description: Shell company registered to process fraudulent transactions.
+
+Pattern:
+- Company registered with fake or accommodation address
+- Square merchant account opened
+- Processes fraudulent transactions
+- Closes before chargebacks arrive
+- Operator disappears
+
+Example:
+- Business: "Tech Reparatur Services GmbH"
+- Address: Accommodation address in Berlin
+- Activity: High-value "repair" transactions
+- Reality: No actual business operations
+- Customers: Cards stolen or complicit in fraud
+- Risk Score: 0.95
+- Action: FREEZE merchant account, verify business legitimacy, require proof of operations
+
+SCENARIO 3: FLOHMARKT (FLEA MARKET) FRAUD
+Description: Temporary vendor at flea market engaging in fraud.
+
+Pattern:
+- Vendor at weekend flea market
+- Sells high-value items (electronics, jewelry)
+- Prices too good to be true
+- Items are stolen or counterfeit
+- Accepts card payments via Square
+- Gone next week
+
+Example:
+- Location: Mauerpark Flohmarkt Berlin
+- Vendor: Selling "new" iPhones at 40% discount
+- Transaction: €1,200 for iPhone 15 Pro
+- Reality: Stolen or counterfeit devices
+- Risk Score: 0.82
+- Action: HOLD high-value transactions, verify merchandise legitimacy, require fixed business address
+
+SCENARIO 4: SPESENABRECHNUNG (EXPENSE FRAUD)
+Description: Employee with company card makes personal purchases disguised as business.
+
+German Context:
+- Company expense reimbursement common
+- Business credit cards widely used
+- Small business meals and supplies often paid with company cards
+
+Pattern:
+- Employee has company card
+- Makes personal purchases at Square merchants
+- Claims as business expense
+- Company discovers fraud during audit
+
+Example:
+- Transaction: €2,500 at jewelry store
+- Card: Company card from Munich firm
+- Claim: "Client gifts"
+- Reality: Personal purchase
+- Risk Score: 0.65 (fraud but authorized cardholder)
+- Action: Flag unusual category for business card, alert card issuer for review
+
+SCENARIO 5: FESTIVAL VENDOR SCAM
+Description: Fake vendor at German festival or event.
+
+German Festivals:
+- Oktoberfest, Christmas markets (Weihnachtsmarkt), street festivals
+- Temporary vendor booths common
+- High transaction volume, fast pace
+- Opportunity for fraud
+
+Pattern:
+- Vendor at major festival
+- Sells souvenirs, food, crafts
+- Some transactions fraudulent (stolen cards)
+- Or vendor uses opportunity to skim cards
+- Disappears after festival ends
+
+Example:
+- Event: Cologne Christmas Market
+- Vendor: Selling mulled wine and crafts
+- Multiple €50-€150 transactions
+- Several cards stolen or test charges
+- Risk Score: 0.78
+- Action: Enhanced monitoring of festival merchants, coordinate with event organizers, verify vendor registration
+
+SCENARIO 6: KONTAKTLOS (CONTACTLESS) FRAUD
+Description: Stolen card used for contactless payments under €50 (no PIN required).
+
+Pattern:
+- Card stolen or lost
+- Thief makes multiple small contactless payments
+- No PIN required under €50 in Germany
+- Rapid succession of transactions
+- Victim may not notice for hours/days
+
+Example:
+- Card: Stolen in Hamburg metro
+- Transactions: 12 purchases of €30-€49 over 2 hours
+- Merchants: Various Square merchants (cafes, shops)
+- Total: €480 before card blocked
+- Risk Score: 0.75 per transaction
+- Action: Velocity detection, block card after suspicious pattern, alert cardholder
+
+SCENARIO 7: TRINKGELD (TIP) PADDING
+Description: Merchant adds tip without customer consent or inflates amount.
+
+Pattern:
+- Customer makes purchase
+- Merchant suggests tip
+- Customer agrees to small tip
+- Merchant enters larger tip amount
+- Customer doesn't notice until reviewing statement
+
+Example:
+- Restaurant bill: €85
+- Customer agrees to €5 tip (6%)
+- Merchant enters €25 tip (29%)
+- Total charged: €110 vs expected €90
+- Risk Score: 0.60 (low-level fraud, hard to prove)
+- Action: Pattern detection across merchant, customer complaints monitoring, merchant warning
+
+GERMAN COMPLIANCE REQUIREMENTS
+
+TECHNICAL SECURITY EQUIPMENT (TSE):
+Required for electronic cash registers since 2020:
+- Certified security module
+- Tamper-proof transaction recording
+- Digital signature for each transaction
+- Audit-proof export capability
+- Square must provide TSE-compliant solution for German merchants
+
+This rule verifies:
+- Merchant has TSE certification if required (sales >€17,500/year typically)
+- Transactions properly recorded
+- Audit trail available
+
+EXCEPTIONS:
+- Very small businesses may be exempt
+- Non-fixed establishments (market vendors) had extended deadlines
+- Service providers (freelancers) may be exempt
+
+DIGITAL RECEIPT REQUIREMENT:
+- Customers have right to digital receipt (e-receipt)
+- Paper receipt still most common in Germany
+- Receipt must include: Date, time, items, amounts, VAT, receipt number
+- Square must provide compliant receipt format
+
+GEWERBE REGISTRATION:
+- All businesses must register (Gewerbeanmeldung)
+- Even small side businesses
+- Registration with local Ordnungsamt
+- Tax number (Steuernummer) required
+
+This rule checks:
+- Merchant appears to be properly registered
+- Business address is legitimate
+- Red flag if no valid business registration
+
+CARD PAYMENT SPECIFIC REGULATIONS
+
+GIROCARD SYSTEM:
+- German debit card system
+- Most widely used card in Germany
+- PIN-based authentication
+- Lower fraud rates than credit cards
+- Square must support Girocard
+
+CONTACTLESS LIMITS:
+- €50 limit for contactless without PIN (Germany)
+- Higher than €25 EU minimum
+- After certain number of transactions, PIN required
+- This rule monitors for contactless fraud patterns
+
+FOREIGN CARDS:
+- Credit cards (Visa, Mastercard) accepted
+- May have higher merchant fees
+- German customers prefer Girocard
+- Foreign tourist cards expected in tourist areas
+- Suspicious if too many foreign cards for local business
+
+AUTOMATED RESPONSE ACTIONS
+
+WHEN SCORE 0.70-0.80 (Medium-High Risk):
+1. Flag for review by German compliance team
+2. Verify merchant TSE certification if applicable
+3. Check Gewerbeanmeldung (business registration)
+4. Confirm location matches registered address
+5. Review transaction pattern for anomalies
+6. Provide merchant compliance reminder if needed
+
+WHEN SCORE 0.80-0.90 (High Risk):
+1. HOLD transaction for manual approval
+2. Contact merchant to verify legitimacy
+3. Request business documentation
+4. Enhanced due diligence on merchant operations
+5. On-site verification for high-risk cases
+6. Extend chargeback reserve period
+
+WHEN SCORE > 0.90 (Critical Risk):
+1. FREEZE merchant account immediately
+2. Comprehensive investigation
+3. Coordinate with Finanzamt if tax fraud suspected
+4. Report to Landeskriminalamt if criminal fraud
+5. Request full business documentation
+6. Possible account termination
+7. Notify affected customers
+
+CUSTOMER PROTECTION
+
+CHARGEBACK RIGHTS:
+- German consumers have strong chargeback rights
+- 8 weeks for authorized but problematic transactions
+- 13 months for unauthorized transactions
+- Merchants must respond with evidence
+- Square must facilitate proper chargeback process
+
+WIDERRUFSRECHT (RIGHT OF WITHDRAWAL):
+- Applies to online and distance sales
+- 14-day return period
+- Merchant must honor returns
+- Full refund required
+- Square Online transactions must comply
+
+DATENSCHUTZ (DATA PROTECTION):
+- GDPR compliance required
+- Card data protection critical
+- Limited data retention
+- Customer consent for marketing
+- Data breach notification obligations
+
+CUSTOMER COMMUNICATION (GERMAN)
+
+TRANSACTION HOLD MESSAGE:
+"⚠️ TRANSAKTION ÜBERPRÜFT
+
+Wir überprüfen diese Transaktion aufgrund von:
+• [Spezifische Gründe]
+
+Für Händler:
+- Stellen Sie sicher, dass Ihre TSE-Zertifizierung aktuell ist
+- Ihr Gewerbe muss ordnungsgemäß angemeldet sein
+- Ein gültiges Impressum ist erforderlich
+
+Für Kunden:
+- Überprüfen Sie, ob der Händler vertrauenswürdig ist
+- Bewahren Sie Ihre Quittung auf
+- Sie haben Widerrufsrecht bei Fernabsatz
+
+Fragen? Kontaktieren Sie Square Deutschland Support."
+
+MERCHANT COMPLIANCE REMINDER:
+"Wichtige Compliance-Anforderungen in Deutschland:
+
+✓ TSE (Technische Sicherheitseinrichtung) - erforderlich für elektronische Kassen
+✓ Gewerbeanmeldung - alle Geschäfte müssen registriert sein
+✓ Impressum - erforderlich bei Online-Präsenz
+✓ GoBD-konforme Aufzeichnung - 10-jährige Aufbewahrungspflicht
+✓ Datenschutz (DSGVO) - Kundendaten schützen
+
+Weitere Informationen: square.com/de/help"
+
+INTEGRATION WITH GERMAN AUTHORITIES
+
+FINANZAMT (TAX OFFICE):
+- Cash register compliance enforcement
+- TSE audit requirements
+- VAT reporting
+- Business tax verification
+
+GEWERBEAUFSICHT (TRADE SUPERVISORY OFFICE):
+- Business registration verification
+- Compliance monitoring
+- Operating license validation
+
+LANDESKRIMINALAMT (STATE CRIMINAL POLICE):
+- Fraud investigation
+- Organized crime (card fraud rings)
+- Cross-border fraud
+
+BUNDESNETZAGENTUR:
+- Payment service provider oversight
+- Consumer protection
+- Dispute resolution
+
+EXAMPLES
+
+Example 1 - Legitimate Market Vendor (APPROVE):
+- Merchant: Organic vegetable vendor, Munich Viktualienmarkt
+- Registration: Valid Gewerbeschein, TSE certified
+- Transaction: €150 for produce and preserves
+- Customer: Local regular
+- Risk Score: 0.35
+- Action: APPROVE, standard processing
+
+Example 2 - Fake Festival Vendor (BLOCK):
+- Merchant: "Tech Accessories" at Cologne festival
+- Registration: No valid Gewerbeanmeldung found
+- Transaction: €2,500 for "smartphones"
+- Red flags: New Square account, no business history, suspicious pricing
+- Risk Score: 0.95
+- Action: BLOCK transaction, investigate merchant, coordinate with festival organizers
+
+Example 3 - Expense Fraud (ALERT):
+- Transaction: €3,200 at luxury goods store
+- Card: Company credit card from business in Frankfurt
+- Unusual: Personal goods category for business card
+- Risk Score: 0.68
+- Action: ALERT card issuer, flag for business to review expenses
+
+Example 4 - Contactless Fraud Pattern (BLOCK):
+- Pattern: 8 contactless transactions in 45 minutes
+- Amounts: €35-€49 each (under PIN limit)
+- Locations: Various Square merchants across Berlin
+- Total: €340
+- Risk Score: 0.82
+- Action: BLOCK card, alert cardholder, investigate merchants if compromised
+
+SEASONAL AND EVENT CONSIDERATIONS
+
+WEIHNACHTSMARKT (CHRISTMAS MARKETS):
+- November-December, throughout Germany
+- High transaction volume
+- Many temporary vendors
+- Increased fraud risk
+- Enhanced merchant verification during season
+
+OKTOBERFEST:
+- September-October, Munich (and other cities)
+- Massive transaction volume
+- Temporary vendor booths
+- Tourist targets
+- Special monitoring protocols
+
+MARKET DAYS (WOCHENMARKT):
+- Regular weekly markets in most cities
+- Wednesday and Saturday typically
+- Established vendors but turnover occurs
+- Lower risk than festivals but still monitored
+
+RELATED RULES
+- DE-STRIPE-001: Cross-vendor German monitoring
+- GLOBAL-001: High-value threshold
+- EU-wide POS fraud detection
+
+PERFORMANCE METRICS
+- Merchant Compliance Rate: > 95%
+- TSE Verification: 100% for required merchants
+- False Positive Rate: < 18%
+- Fraud Detection at Markets/Events: > 75%
+- Average Review Time: < 2 hours for merchant verification
+
+TRAINING REQUIREMENTS
+German Square fraud analysts must complete:
+- Kassensicherungsverordnung (KassenSichV) requirements
+- TSE certification and compliance
+- Gewerbeanmeldung verification
+- German language (fluency required)
+- GoBD record-keeping standards
+- Girocard vs. credit card systems
+- German business culture and practices
+- Finanzamt coordination procedures

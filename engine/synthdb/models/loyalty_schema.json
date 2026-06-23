@@ -1,0 +1,22 @@
+{
+  "model_name": "loyalty",
+  "description": "Customer Loyalty Program System",
+  "tables": {
+    "loyalty_programs": {"primary_key": "program_id"},
+    "customers": {"primary_key": "customer_id"},
+    "memberships": {"primary_key": "membership_id", "foreign_keys": {"customer_id": "customers.customer_id", "program_id": "loyalty_programs.program_id"}},
+    "reward_categories": {"primary_key": "category_id"},
+    "rewards": {"primary_key": "reward_id", "foreign_keys": {"category_id": "reward_categories.category_id", "program_id": "loyalty_programs.program_id"}},
+    "transactions": {"primary_key": "transaction_id", "foreign_keys": {"membership_id": "memberships.membership_id"}},
+    "redemptions": {"primary_key": "redemption_id", "foreign_keys": {"membership_id": "memberships.membership_id", "reward_id": "rewards.reward_id"}}
+  },
+  "relationships": [
+    {"parent": "loyalty_programs", "child": "memberships"},
+    {"parent": "loyalty_programs", "child": "rewards"},
+    {"parent": "customers", "child": "memberships"},
+    {"parent": "reward_categories", "child": "rewards"},
+    {"parent": "memberships", "child": "transactions"},
+    {"parent": "memberships", "child": "redemptions"},
+    {"parent": "rewards", "child": "redemptions"}
+  ]
+}

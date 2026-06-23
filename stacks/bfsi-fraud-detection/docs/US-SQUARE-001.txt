@@ -1,0 +1,332 @@
+Fraud Detection Rule: US-SQUARE-001
+Rule Name: US Square Merchant Risk Assessment
+Region: United States (US)
+Payment Vendor: Square
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors Square point-of-sale (POS) and online transactions for merchant-side fraud patterns, including friendly fraud, chargeback abuse, and suspicious merchant behavior that may indicate scams or unauthorized business practices.
+
+RULE PARAMETERS
+- Risk Score Threshold: 0.65
+- Action: Review (merchant and transaction review)
+- Category: Merchant Risk Assessment
+- Focus: Both customer fraud AND merchant fraud
+
+RULE DESCRIPTION
+Square serves small businesses, pop-up shops, and individual sellers, which creates unique fraud risks. This rule addresses both traditional payment fraud and merchant-specific fraud patterns including:
+
+1. Merchant impersonation and scams
+2. Friendly fraud from customers
+3. Chargeback manipulation
+4. Card-not-present fraud for Square Online
+5. Fake or unauthorized merchants
+
+SQUARE-SPECIFIC RISK FACTORS
+
+MERCHANT REPUTATION SIGNALS:
+- New merchant account (< 90 days)
+- High chargeback rate (> 1%)
+- Customer complaints or disputes
+- Inconsistent business description
+- Website quality and legitimacy
+- Social media presence verification
+- Business registration verification
+
+TRANSACTION PATTERNS:
+- Sudden spike in transaction volume
+- Unusually high average transaction amount
+- Geographic mismatch (merchant location vs. customer)
+- Off-hours transactions for typically daytime businesses
+- Bulk purchases from single customer
+- Gift card or prepaid card transactions
+
+DEVICE AND HARDWARE:
+- Square Reader serial number verification
+- Device location changes (mobile readers moving unexpectedly)
+- Multiple merchant accounts on single device
+- Rooted or jailbroken device detection
+- GPS location inconsistencies
+
+TRIGGERING CONDITIONS
+This rule triggers when fraud score reaches 0.65 or higher based on:
+
+MERCHANT RISK SCORE (0-0.40):
+- New merchant: +0.15
+- High chargeback rate: +0.20
+- No web presence: +0.10
+- Unverified business: +0.15
+- Category high-risk (electronics resale, jewelry): +0.10
+
+TRANSACTION RISK SCORE (0-0.35):
+- Amount > $500: +0.10
+- Card-not-present: +0.10
+- International card: +0.10
+- Multiple attempts: +0.15
+
+CUSTOMER RISK SCORE (0-0.25):
+- New customer: +0.10
+- Multiple failed cards: +0.15
+- VPN/proxy: +0.10
+
+Total Score = Merchant + Transaction + Customer scores
+
+FRAUD SCENARIOS
+
+SCENARIO 1: Fake Merchant Scam
+Description: Criminal sets up fake Square merchant account to process fraudulent transactions, then disappears before chargebacks arrive.
+
+Indicators:
+- Brand new Square account
+- No physical business location
+- High-value transactions immediately
+- Multiple different customer cards
+- Merchant unresponsive to Square communication
+- Funds withdrawn immediately
+
+Example:
+- Merchant: "Premium Electronics Outlet"
+- Account age: 3 days
+- Transaction: $2,800 laptop sale
+- Customer: First-time, using card from different state
+- Red flag: No website, no business registration, temporary phone number
+- Risk Score: 0.85 → HOLD transaction, verify merchant
+
+SCENARIO 2: Friendly Fraud (Customer-Initiated)
+Description: Customer makes legitimate purchase but later disputes charge claiming fraud or non-receipt.
+
+Indicators:
+- Customer has history of chargebacks
+- High-value item (electronics, jewelry)
+- Pickup or immediate delivery
+- Customer pressures for quick transaction
+- No signature or proper documentation
+
+Example:
+- Customer purchases $1,500 camera equipment
+- Pays with credit card via Square Terminal
+- Two weeks later files chargeback: "unauthorized transaction"
+- Evidence shows customer was present (signature, ID checked)
+- Risk Score: 0.70 → Document everything, prepare chargeback defense
+
+SCENARIO 3: Chargeback Ring
+Description: Organized fraud where multiple "customers" purchase from complicit merchant, then all file chargebacks after merchant withdraws funds and disappears.
+
+Indicators:
+- Multiple transactions in short time from different cards
+- All transactions similar amounts
+- Cards from various geographic locations
+- Merchant withdraws funds immediately
+- Pattern repeats across multiple merchant accounts
+
+Example:
+- Merchant: "Wholesale Gift Cards"
+- 15 transactions of $800-$1,200 over 2 days
+- All cards from different states
+- Merchant transfers funds to external account
+- Next week: 15 chargebacks filed
+- Risk Score: 0.90 → FREEZE merchant account, investigate
+
+SCENARIO 4: Card Testing via Square
+Description: Criminals test stolen card numbers using Square merchants (often with merchant cooperation).
+
+Indicators:
+- Many small transactions ($1-$5)
+- Sequential card numbers or patterns
+- Failed transactions followed by successes
+- Different billing/shipping info
+- Merchant in high-risk category
+
+Example:
+- Coffee shop processes 50 transactions of $1-$2 in one hour
+- All different cards
+- Customer never actually present
+- Same IP address for all transactions (Square Online)
+- Risk Score: 0.95 → BLOCK merchant, report to law enforcement
+
+SQUARE POS VS. SQUARE ONLINE
+
+Square POS (Card-Present) Considerations:
+- Lower fraud risk generally (chip card verification)
+- Focus on friendly fraud and merchant scams
+- Device location verification important
+- Customer signature and receipt documentation
+- Physical goods exchange verification
+
+Square Online (Card-Not-Present) Considerations:
+- Higher fraud risk (no physical card verification)
+- CVV and AVS checks critical
+- Shipping address verification
+- Digital goods have highest risk
+- Email and phone verification recommended
+
+INDUSTRY-SPECIFIC RULES
+
+RESTAURANTS AND CAFES:
+- Tip padding fraud detection
+- Split check verification
+- Refund abuse monitoring
+- Employee theft patterns
+
+RETAIL STORES:
+- Return fraud monitoring
+- Gift card balance theft
+- Inventory consistency checks
+- Multiple refund patterns
+
+SERVICE PROVIDERS:
+- No-show chargebacks
+- Quality dispute patterns
+- Deposit fraud
+- Cancellation policy enforcement
+
+MOBILE VENDORS:
+- Location change patterns
+- Event-based verification
+- Temporary merchant validation
+- Cash-equivalent sales (gift cards)
+
+AUTOMATED RESPONSE ACTIONS
+
+WHEN SCORE 0.65-0.75 (Medium Risk):
+1. Flag transaction for review
+2. Require additional documentation
+3. Hold funds for extended period (7 days vs. standard 2 days)
+4. Request customer signature and ID
+5. Send merchant fraud prevention tips
+
+WHEN SCORE 0.75-0.85 (High Risk):
+1. Hold transaction for manual approval
+2. Contact merchant to verify transaction
+3. Request proof of goods/service delivery
+4. Extend chargeback reserve period
+5. Consider reducing processing limits
+
+WHEN SCORE >0.85 (Critical Risk):
+1. Block transaction immediately
+2. Freeze merchant account
+3. Escalate to Square fraud team
+4. Request comprehensive documentation
+5. Possible merchant account suspension
+6. Law enforcement notification if criminal activity suspected
+
+CHARGEBACK DEFENSE
+
+Square sellers must maintain:
+- Transaction receipts and signatures
+- Proof of delivery (tracking numbers, signatures)
+- Customer communication records
+- Product/service descriptions
+- Photos of items sold (for high-value transactions)
+- Return/refund policy acknowledgment
+
+This rule automatically flags transactions for enhanced documentation when fraud risk is elevated, helping merchants defend against illegitimate chargebacks.
+
+INTEGRATION WITH SQUARE ECOSYSTEM
+
+Square Dashboard Alerts:
+- Real-time notifications for high-risk transactions
+- Weekly fraud risk summary emails
+- Chargeback rate monitoring
+- Industry benchmark comparisons
+
+Square Terminal Integration:
+- Automatic prompts for additional verification
+- Customer signature capture for high-value transactions
+- ID verification reminders
+- Receipt delivery confirmation
+
+Square Capital Decisions:
+- Fraud history impacts loan eligibility
+- Chargeback rates affect advance offers
+- High-risk merchants may have reduced limits
+
+MERCHANT EDUCATION
+
+Square provides fraud prevention guidance:
+- How to spot fake IDs
+- Verifying card holder identity
+- Handling suspicious customer requests
+- Proper documentation for chargeback defense
+- Understanding card-present vs. card-not-present risks
+
+This rule triggers educational content delivery when merchants exhibit risky patterns.
+
+RELATED RULES
+- US-STRIPE-001: Cross-vendor high-value comparison
+- US-SQUARE velocity checks (separate system)
+- GLOBAL-001: High-value threshold
+- Chargeback monitoring (Square internal)
+
+EXAMPLES OF LEGITIMATE HIGH-RISK TRANSACTIONS
+
+Example 1 - Art Fair Vendor:
+- Merchant: Jewelry artist at weekend art fair
+- Transaction: $850 custom necklace
+- Risk factors: New customer, high value, mobile POS
+- Legitimacy signals: Event verification, customer present, item photographed
+- Score: 0.62 → APPROVE with enhanced documentation
+
+Example 2 - Home Repair Service:
+- Merchant: Licensed contractor
+- Transaction: $3,200 down payment for renovation
+- Risk factors: Large amount, service industry
+- Legitimacy signals: License verified, customer called to confirm, detailed invoice
+- Score: 0.58 → APPROVE, standard processing
+
+Example 3 - Pop-Up Retail:
+- Merchant: Sneaker reseller at pop-up shop
+- Transaction: $600 limited edition sneakers
+- Risk factors: Temporary location, high-value shoes, resale category
+- Legitimacy signals: Social media following verified, products authentic, customer satisfied
+- Score: 0.68 → APPROVE with 7-day hold and documentation
+
+COMPLIANCE CONSIDERATIONS
+
+SQUARE SELLER AGREEMENT:
+- Merchants agree to maintain chargeback rate < 1%
+- Excessive chargebacks may result in account termination
+- Prohibited business types (adult, gambling without license, etc.)
+- Accurate business description required
+
+PAYMENT CARD INDUSTRY (PCI DSS):
+- Square handles PCI compliance for merchants
+- Merchants must still follow best practices
+- Card data should never be stored by merchant
+- Square encryption protects card data
+
+STATE REGULATIONS:
+- Money transmitter licenses (varies by state)
+- Sales tax collection compliance
+- Business registration requirements
+- Professional licenses for certain services
+
+PERFORMANCE METRICS
+Target metrics for this rule:
+- Chargeback Prevention Rate: > 70%
+- False Positive Rate: < 15% (higher tolerance for merchant protection)
+- Merchant Satisfaction: Minimal disruption to legitimate business
+- Fraud Loss Reduction: > 60% compared to no monitoring
+- Response Time: < 2 hours for merchant communication
+
+SEASONAL AND EVENT ADJUSTMENTS
+
+HOLIDAY SHOPPING (Nov-Dec):
+- Increased transaction volumes expected
+- Higher average transaction amounts normal
+- Gift purchases common (different shipping addresses okay)
+- Return fraud monitoring increased in January
+
+FESTIVALS AND MARKETS:
+- Temporary merchant locations expected
+- Mobile reader location changes normal
+- Cash-equivalent sales (tickets, gift cards) increase
+- Verify event credentials and permits
+
+TAX SEASON (April):
+- Service providers see payment spikes
+- Higher single-transaction amounts
+- Professional services (accountants, lawyers)
+- Verify business legitimacy for new providers
+
+This rule adapts thresholds based on merchant category and calendar seasonality to reduce false positives while maintaining fraud detection effectiveness.

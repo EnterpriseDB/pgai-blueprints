@@ -1,0 +1,53 @@
+{
+  "loyalty_programs": [
+    {"program_id": 1, "program_name": "Gold Rewards", "description": "Premium loyalty program with exclusive benefits", "points_per_dollar": 2, "status": "active", "start_date": "2023-01-01", "tier_threshold": 10000},
+    {"program_id": 2, "program_name": "Silver Plus", "description": "Standard loyalty program for regular customers", "points_per_dollar": 1, "status": "active", "start_date": "2022-06-15", "tier_threshold": 5000},
+    {"program_id": 3, "program_name": "Bronze Basic", "description": "Entry-level loyalty program", "points_per_dollar": 0.5, "status": "active", "start_date": "2022-01-01", "tier_threshold": 1000},
+    {"program_id": 4, "program_name": "VIP Platinum", "description": "Exclusive program for high-value customers", "points_per_dollar": 5, "status": "active", "start_date": "2023-06-01", "tier_threshold": 25000}
+  ],
+  "customers": [
+    {"customer_id": 1, "first_name": "Alex", "last_name": "Thompson", "email": "alex.thompson@email.com", "phone": "+1-555-5001", "address": "123 Loyalty Lane, Boston, MA", "date_of_birth": "1985-04-12", "registration_date": "2023-01-15"},
+    {"customer_id": 2, "first_name": "Maria", "last_name": "Garcia", "email": "maria.garcia@email.com", "phone": "+1-555-5002", "address": "456 Reward Street, Boston, MA", "date_of_birth": "1990-08-25", "registration_date": "2023-02-20"},
+    {"customer_id": 3, "first_name": "James", "last_name": "Wilson", "email": "james.wilson@email.com", "phone": "+1-555-5003", "address": "789 Points Avenue, Cambridge, MA", "date_of_birth": "1982-11-30", "registration_date": "2022-12-10"},
+    {"customer_id": 4, "first_name": "Sarah", "last_name": "Lee", "email": "sarah.lee@email.com", "phone": "+1-555-5004", "address": "321 Benefits Blvd, Cambridge, MA", "date_of_birth": "1988-07-18", "registration_date": "2023-03-05"},
+    {"customer_id": 5, "first_name": "Robert", "last_name": "Johnson", "email": "robert.johnson@email.com", "phone": "+1-555-5005", "address": "654 Member Drive, Somerville, MA", "date_of_birth": "1975-02-14", "registration_date": "2022-11-20"},
+    {"customer_id": 6, "first_name": "Lisa", "last_name": "Chen", "email": "lisa.chen@email.com", "phone": "+1-555-5006", "address": "987 Program Plaza, Somerville, MA", "date_of_birth": "1992-09-03", "registration_date": "2023-01-30"}
+  ],
+  "memberships": [
+    {"membership_id": 1, "customer_id": 1, "program_id": 1, "membership_number": "GOLD001234", "join_date": "2023-01-15", "current_points": 15250, "lifetime_points": 28500, "tier_status": "Gold", "status": "active"},
+    {"membership_id": 2, "customer_id": 2, "program_id": 2, "membership_number": "SILV002345", "join_date": "2023-02-20", "current_points": 3200, "lifetime_points": 8750, "tier_status": "Silver", "status": "active"},
+    {"membership_id": 3, "customer_id": 3, "program_id": 1, "membership_number": "GOLD003456", "join_date": "2022-12-10", "current_points": 22100, "lifetime_points": 35600, "tier_status": "Gold", "status": "active"},
+    {"membership_id": 4, "customer_id": 4, "program_id": 3, "membership_number": "BRNZ004567", "join_date": "2023-03-05", "current_points": 890, "lifetime_points": 1450, "tier_status": "Bronze", "status": "active"},
+    {"membership_id": 5, "customer_id": 5, "program_id": 4, "membership_number": "PLAT005678", "join_date": "2022-11-20", "current_points": 45200, "lifetime_points": 67800, "tier_status": "Platinum", "status": "active"},
+    {"membership_id": 6, "customer_id": 6, "program_id": 2, "membership_number": "SILV006789", "join_date": "2023-01-30", "current_points": 2150, "lifetime_points": 4300, "tier_status": "Silver", "status": "active"}
+  ],
+  "reward_categories": [
+    {"category_id": 1, "category_name": "Travel", "description": "Flight tickets, hotel stays, car rentals"},
+    {"category_id": 2, "category_name": "Shopping", "description": "Gift cards, merchandise, discounts"},
+    {"category_id": 3, "category_name": "Dining", "description": "Restaurant vouchers, food delivery credits"},
+    {"category_id": 4, "category_name": "Entertainment", "description": "Movie tickets, concert passes, streaming subscriptions"},
+    {"category_id": 5, "category_name": "Cashback", "description": "Direct cash rewards and statement credits"}
+  ],
+  "rewards": [
+    {"reward_id": 1, "program_id": 1, "category_id": 1, "reward_name": "Domestic Flight Voucher", "description": "$500 flight voucher for domestic travel", "points_required": 25000, "cash_value": 500.00, "availability": "unlimited"},
+    {"reward_id": 2, "program_id": 1, "category_id": 2, "reward_name": "Amazon Gift Card $100", "description": "$100 Amazon gift card", "points_required": 10000, "cash_value": 100.00, "availability": "unlimited"},
+    {"reward_id": 3, "program_id": 2, "category_id": 3, "reward_name": "Restaurant Voucher $50", "description": "$50 voucher for partner restaurants", "points_required": 5000, "cash_value": 50.00, "availability": "limited"},
+    {"reward_id": 4, "program_id": 3, "category_id": 4, "reward_name": "Movie Tickets (2)", "description": "Two movie tickets at participating theaters", "points_required": 1500, "cash_value": 30.00, "availability": "unlimited"},
+    {"reward_id": 5, "program_id": 4, "category_id": 5, "reward_name": "Cashback $200", "description": "Direct cash credit to account", "points_required": 20000, "cash_value": 200.00, "availability": "unlimited"},
+    {"reward_id": 6, "program_id": 1, "category_id": 3, "reward_name": "Fine Dining Experience", "description": "3-course meal for two at premium restaurant", "points_required": 15000, "cash_value": 300.00, "availability": "limited"}
+  ],
+  "transactions": [
+    {"transaction_id": 1, "membership_id": 1, "transaction_date": "2024-01-15", "transaction_type": "purchase", "amount": 125.50, "points_earned": 251, "points_used": 0, "description": "Online purchase - Electronics"},
+    {"transaction_id": 2, "membership_id": 2, "transaction_date": "2024-01-16", "transaction_type": "purchase", "amount": 89.99, "points_earned": 90, "points_used": 0, "description": "In-store purchase - Clothing"},
+    {"transaction_id": 3, "membership_id": 3, "transaction_date": "2024-01-17", "transaction_type": "purchase", "amount": 250.00, "points_earned": 500, "points_used": 0, "description": "Online purchase - Home goods"},
+    {"transaction_id": 4, "membership_id": 1, "transaction_date": "2024-01-18", "transaction_type": "bonus", "amount": 0.00, "points_earned": 1000, "points_used": 0, "description": "Birthday bonus points"},
+    {"transaction_id": 5, "membership_id": 4, "transaction_date": "2024-01-19", "transaction_type": "purchase", "amount": 45.75, "points_earned": 23, "points_used": 0, "description": "Coffee shop purchase"},
+    {"transaction_id": 6, "membership_id": 5, "transaction_date": "2024-01-20", "transaction_type": "purchase", "amount": 500.00, "points_earned": 2500, "points_used": 0, "description": "Premium service purchase"}
+  ],
+  "redemptions": [
+    {"redemption_id": 1, "membership_id": 1, "reward_id": 2, "redemption_date": "2024-01-20", "points_redeemed": 10000, "status": "completed", "fulfillment_date": "2024-01-21"},
+    {"redemption_id": 2, "membership_id": 3, "reward_id": 6, "redemption_date": "2024-01-18", "points_redeemed": 15000, "status": "completed", "fulfillment_date": "2024-01-25"},
+    {"redemption_id": 3, "membership_id": 2, "reward_id": 3, "redemption_date": "2024-01-19", "points_redeemed": 5000, "status": "pending", "fulfillment_date": null},
+    {"redemption_id": 4, "membership_id": 5, "reward_id": 5, "redemption_date": "2024-01-21", "points_redeemed": 20000, "status": "completed", "fulfillment_date": "2024-01-22"}
+  ]
+}

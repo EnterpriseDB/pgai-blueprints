@@ -1,0 +1,36 @@
+# Build context exclusions — keeps pgd/app/ml-inference/etc image builds lean.
+# Each Dockerfile COPYs only the dirs it needs; this list excludes everything else.
+# For demonstration purposes only.
+
+# Heavy data / artifacts (loaded at runtime from PVC, not baked in)
+notebooks/.ipynb_checkpoints/
+notebooks/*.nbconvert.ipynb
+mlflow-data/
+clickhouse-data/
+risingwave-data/
+minio-data/
+pgd-data/
+pgd-analytics/
+langflow-data/
+metabase-plugins/
+app-node-modules/
+
+# Editor + VCS
+.git/
+.gitignore
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Archive
+_archive/
+
+# Docs (not needed in any image)
+README.md
+*.md
+docs/
+
+# Per-service Dockerfiles only need their own dir's children — this list keeps
+# the big sibling dirs out of pgd's context, app's context, etc. Add more here
+# as you discover unnecessary inclusions during build.

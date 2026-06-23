@@ -1,0 +1,463 @@
+# For demonstration purposes only.
+
+name: "Core Banking Fraud Audit"
+version: "1.0"
+card: ml-inference
+card_label: "ML Inference"
+industry: bfsi
+industry_case: "Fraud Detection"
+deploy_targets: [laptop, northflank]
+description: |
+  Progressive deployment stack for real-time ML fraud detection.
+
+  Profiles:
+  - Foundation (default): pgd, kafka, risingwave, clickhouse, minio, lakekeeper, jupyter, mlflow, langflow
+  - oltp: Bank App for transaction processing
+  - ml: ML inference engines (Kafka, PGAA, RisingWave, ClickHouse paths)
+  - genai: LangFlow flow configuration and MCP setup
+
+components:
+# === FOUNDATION (starts by default) ===
+- name: pgd
+  type: database
+  profile: foundation
+  image: custom (EDB PGD + PGAA + AIDB)
+  description: EDB Postgres Distributed — OLTP with AI extensions
+- name: langflow
+  type: ai-agent
+  profile: foundation
+  image: langflowai/langflow:latest
+  description: LangFlow visual agent builder
+- name: risingwave
+  type: streaming
+  profile: foundation
+  image: risingwavelabs/risingwave:latest
+  description: Streaming SQL — Kafka consumer + MVs
+- name: kafka
+  type: streaming
+  profile: foundation
+  image: apache/kafka:latest
+  description: Event streaming (KRaft, no Zookeeper)
+- name: kafka-connect
+  type: cdc
+  profile: foundation
+  image: debezium/connect:2.4
+  description: Debezium CDC — PG WAL to Kafka
+- name: clickhouse
+  type: database
+  profile: foundation
+  image: clickhouse/clickhouse-server:latest
+  description: ClickHouse OLAP — batch analytics
+- name: jupyter
+  type: ml
+  profile: foundation
+  image: jupyter/datascience-notebook:latest
+  description: ML model training environment
+- name: minio
+  type: storage
+  profile: foundation
+  image: minio/minio:latest
+  description: S3-compatible storage (Iceberg + fraud rule docs)
+- name: lakekeeper
+  type: catalog
+  profile: foundation
+  image: quay.io/lakekeeper/catalog:latest
+  description: Iceberg REST Catalog for PGAA
+- name: mlflow
+  type: ml-platform
+  profile: foundation
+  image: ghcr.io/mlflow/mlflow:v2.18.0
+  description: MLFlow experiment tracking and model registry
+- name: metabase
+  type: analytics
+  profile: foundation
+  image: metabase/metabase:latest
+  description: Metabase analytics dashboards — fraud detection metrics
+
+# === OLTP PROFILE (--profile oltp) ===
+- name: app
+  type: application
+  profile: oltp
+  image: custom (Node.js)
+  description: Core banking simulator UI — 8 tabs including Fraud Audit
+
+# === ML PROFILE (--profile ml) ===
+- name: kafka-feature-materializer
+  type: ml
+  profile: ml
+  image: bfsi-ml-inference:latest
+  description: Real-time feature enrichment from Kafka
+- name: ml-inference-kafka
+  type: ml
+  profile: ml
+  image: bfsi-ml-inference:latest
+  description: Event-driven XGBoost fraud scoring (<100ms TTDF)
+- name: ml-inference-risingwave
+  type: ml
+  profile: ml
+  image: bfsi-ml-inference:latest
+  description: XGBoost fraud scoring from RW MVs (~4200ms TTDF)
+- name: ml-inference-clickhouse
+  type: ml
+  profile: ml
+  image: bfsi-ml-inference:latest
+  description: XGBoost fraud scoring from CH (~3000ms TTDF)
+- name: ml-inference-pgaa
+  type: ml
+  profile: ml
+  image: bfsi-ml-inference:latest
+  description: XGBoost fraud scoring from PGAA/Iceberg (~300ms TTDF)
+- name: fraud-alert
+  type: ml
+  profile: ml
+  image: bfsi-ml-inference:latest
+  description: Fraud alert monitor — all paths
+
+# === GENAI PROFILE (--profile genai) ===
+- name: langflow-init
+  type: init
+  profile: genai
+  image: bfsi-ml-inference:latest
+  description: Configures LangFlow flows and MCP server
+
+access:
+- name: Bank App (with Fraud Audit)
+  url: http://127.0.0.1:3001#phase2
+  target: _blank
+- name: Metabase Dashboard
+  url: http://127.0.0.1:3002
+- name: LangFlow Agent Builder
+  url: http://127.0.0.1:7861
+- name: MLFlow UI
+  url: http://127.0.0.1:5001
+- name: ClickHouse Play
+  url: http://127.0.0.1:8125/play
+- name: RisingWave Dashboard
+  url: http://127.0.0.1:5697
+- name: Jupyter Notebook
+  url: http://127.0.0.1:8889/?token=databox
+- name: MinIO Console
+  url: http://127.0.0.1:9004
+- name: Airflow
+  url: http://127.0.0.1:8888
+- name: EDB PGD
+  url: "psql -h 127.0.0.1 -p 7434 -U postgres -d demo"
+
+credentials:
+- service: pgd
+  username: postgres
+  password: secret
+  port: 7434
+- service: clickhouse
+  username: default
+  password: admin123
+  port: 8125
+- service: jupyter
+  username: token
+  password: databox
+  port: 8889
+- service: minio
+  username: minioadmin
+  password: minioadmin123
+  api_port: 9003
+  console_port: 9004
+- service: langflow
+  note: Auto-login enabled (development mode)
+  port: 7861
+- service: mlflow
+  note: No authentication (development mode)
+- service: airflow
+  username: admin
+  password: admin
+  port: 8888
+  port: 5001
+- service: metabase
+  username: admin@corebanking.local
+  password: CoreBank1!
+  port: 3002
+
+sample_commands:
+- "psql -h 127.0.0.1 -p 7434 -U postgres -d demo"
+- "docker exec bfsi-clickhouse clickhouse-client --user default --password admin123"
+- "docker exec bfsi-pgd psql -U postgres -d demo -c 'SELECT * FROM fraud_rules;'"
+- "docker exec bfsi-pgd psql -U postgres -d demo -c 'SELECT * FROM v_drift_summary;'"
+- command: "bash"
+  name: "Airflow CLI — airflow-webserver"
+  service: "airflow"
+  type: "airflow"
+  target_container: "bfsi-airflow-webserver"
+
+after_deploy: |
+  Core Banking Fraud Audit Stack running with 18 containers (23 services, 5 init).
+
+  Bank App: http://127.0.0.1:3001
+  LangFlow: http://127.0.0.1:7861
+  MLFlow: http://127.0.0.1:5001
+  ClickHouse: http://127.0.0.1:8125/play
+  Jupyter: http://127.0.0.1:8889/?token=databox
+  MinIO: http://127.0.0.1:9004
+  PGD: psql -h 127.0.0.1 -p 7434 -U postgres -d demo (secret)
+
+  AI AUDIT EXTENSIONS (on top of core-banking-simulator):
+  - LangFlow visual agent for fraud investigation
+  - pg-airman-mcp for database queries via MCP
+  - MLFlow for ML experiment tracking and model registry
+  - 15 fraud detection rules (by region/vendor)
+  - ML/Rules drift analysis views
+  - Fraud audit tab in Bank App
+
+# ──────────────────────────────────────────────────────────────────────────────
+# tuning.profiles — per-host-size resource picks for this stack.
+#
+# Each profile defines values for the env vars used by docker-compose
+# (interpolated as ${VAR:-default}) and by Python scripts (read via
+# os.environ). User-set values in .env always win over the profile pick.
+#
+# The agent picks one tier per stack at deploy time (planned: Phase 2 —
+# auto-detect Docker memory, choose `small` ≤12 GB, `medium` 13-24 GB,
+# `large` 25-48 GB, `xl` ≥49 GB). Until then, `medium` is the default
+# applied via the `${VAR:-default}` fallback in docker-compose.yaml.
+#
+# Variables:
+#   PGD_MEMORY_LIMIT   — Docker memory ceiling on cba-pgd container
+#   HYBRID_BM25_CORPUS — Rows tokenized during Build Hybrid Search Demo
+#   HYBRID_BM25_BATCH  — Rows per batched UPDATE during BM25 backfill
+# ──────────────────────────────────────────────────────────────────────────────
+tuning:
+  profiles:
+    small:    # Docker memory ≤ 12 GB — tight BFSI floor; ~30s hybrid build
+      PGD_MEMORY_LIMIT: 3g
+      HYBRID_BM25_CORPUS: 1000
+      HYBRID_BM25_BATCH: 100
+    medium:   # 13-24 GB — DEFAULT; ~1-2 min hybrid build
+      PGD_MEMORY_LIMIT: 4g
+      HYBRID_BM25_CORPUS: 2000
+      HYBRID_BM25_BATCH: 200
+    large:    # 25-48 GB — ~3-5 min hybrid build, richer ranking
+      PGD_MEMORY_LIMIT: 6g
+      HYBRID_BM25_CORPUS: 5000
+      HYBRID_BM25_BATCH: 300
+    xl:       # ≥ 49 GB — ~6-10 min hybrid build, full-fidelity demo
+      PGD_MEMORY_LIMIT: 8g
+      HYBRID_BM25_CORPUS: 10000
+      HYBRID_BM25_BATCH: 500
+
+pipelines:
+
+# Usecase 1: OLTP - Transaction Processing
+- id: oltp
+  name: "Usecase 1: OLTP"
+  flow: |
+    **What this use case shows:** transactions flow into EDB Postgres Distributed through a Bank App, building up the OLTP data layer for everything else.
+    1. **Start Service** — brings up the OLTP schema on pgd, registers the Bank App against it, and verifies the API endpoint is reachable. One-shot; locks after success.
+    2. **Check Status** — verifies pgd is healthy and the Bank App is responding. Re-runnable any time.
+    3. **▶ Start Synthetic Data** (button below the steps) — starts the live transaction simulator inside the Bank App: 1 TX/second across CREDIT / DEBIT / TRANSFER / PAYMENT, with occasional fraud cases. Toggle off any time with **⏹ Stop Synthetic Data**.
+    4. **Open Bank App** to see transactions land in real time, and **Open OLTP Quick View (Metabase)** for a SQL view of the same data.
+  links:
+  - {label: "Bank App", icon: "🏦", url: "http://127.0.0.1:3001", target: "_blank"}
+  - {label: "OLTP Quick View (Metabase)", icon: "📊", url: "http://127.0.0.1:3002"}
+  steps:
+  - id: start-service
+    name: "Start Service"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/setup/oltp/start-service.sh 2>&1'"
+    # rerun=false (default): once Start Service has succeeded, the step is
+    # locked out — destroy the stack and re-deploy to run it again.
+  - id: check-status
+    name: "Check Status"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/status/check-oltp.sh 2>&1'"
+    rerun: true
+  runtime_controls:
+  - id: sim-toggle
+    label_start: "▶ Start Synthetic Data"
+    label_stop: "⏹ Stop Synthetic Data"
+    description: "Run live transaction simulator (Bank App generates new TX every second; trigger populates fraud_labels)"
+    enabled_after: start-service
+    # Auto-connect first (in case Bank App's startup auto-connect raced pgd
+    # health), then start the simulator. /api/auto-connect is idempotent.
+    start_command: "curl -fsS -X POST http://127.0.0.1:3001/api/auto-connect 2>/dev/null; sleep 1; curl -fsS -X POST http://127.0.0.1:3001/api/sim/start -H 'Content-Type: application/json' -d '{\"txTypes\":[\"CREDIT\",\"DEBIT\",\"TRANSFER\",\"PAYMENT\"],\"fraudMode\":\"occasional\",\"intervalMs\":1000}'"
+    stop_command: "curl -fsS -X POST http://127.0.0.1:3001/api/sim/stop"
+    status_url: "http://127.0.0.1:3001/api/health"
+    status_field: "simRunning"
+
+# Usecase 2: OLAP - Analytics Layer
+- id: olap
+  name: "Usecase 2: Analytics and Data Warehouse (OLAP)"
+  flow: |
+    **What this use case shows:** the same OLTP transactions fan out to three analytical engines via CDC, plus an Iceberg lake for historical analytics — all queryable from one Metabase dashboard.
+    1. **Pre-req:** Usecase 1 should already be running with synthetic data flowing. The OLAP engines need a TX feed to subscribe to.
+    2. **Start Service** — wires up Debezium → Kafka → RisingWave (streaming MVs), Postgres → ClickHouse (CDC), and the Iceberg snapshot job to Lakekeeper / MinIO. Applies the Metabase fraud-detection dashboard. One-shot; locks after success.
+    3. **Check Status** — verifies each engine is consuming events and the dashboard tabs are populated. Re-runnable.
+    4. **Open Fraud Detection Dashboard (Metabase)** to compare the three engines side-by-side, or open **ClickHouse Play / RisingWave Dashboard / Lakekeeper** to query each engine directly.
+  links:
+  - {label: "Fraud Detection Dashboard", icon: "📊", url: "http://127.0.0.1:3002"}
+  - {label: "Hybrid Search Demo", icon: "🔎", url: "http://127.0.0.1:4000/api/metabase-dashboard-redirect?name=BFSI:%20Hybrid%20Search%20Demo"}
+  - {label: "ClickHouse Play", icon: "🔶", url: "http://127.0.0.1:8125/play"}
+  - {label: "RisingWave Dashboard", icon: "🌊", url: "http://127.0.0.1:5697"}
+  - {label: "Lakekeeper (Iceberg)", icon: "🧊", url: "http://127.0.0.1:8181"}
+  - {label: "Airflow Reconciliation", icon: "🌀", url: "http://127.0.0.1:8888/dags/fraud_reconciliation/grid", gated_by: "airflow-toggle"}
+  steps:
+  - id: start-service
+    name: "Start Service"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/setup/olap/start-service.sh 2>&1'"
+    # rerun=false (default): once Start Service has succeeded, the step is locked.
+    # Re-running would re-create connectors and re-trigger snapshots; destroy and
+    # re-deploy if you need to start from a clean slate.
+  - id: check-status
+    name: "Check Status"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/status/check-olap.sh 2>&1'"
+    rerun: true
+  - id: build-hybrid-search
+    name: "Build Hybrid Search Demo"
+    optional: true
+    rerun: true
+    command: "bash -c 'cd stacks/bfsi-fraud-detection && stdbuf -oL -eL docker compose --profile setup run --rm metabase-setup python /app/setup_metabase.py --stage hybrid-reindex 2>&1'"
+  runtime_controls:
+  - id: airflow-toggle
+    label_start: "▶ Start Airflow Reconciliation"
+    label_stop: "⏹ Stop Airflow Reconciliation"
+    description: "Brings up Airflow (4 containers, ~1.5 GB) and triggers an immediate reconciliation run that diffs transactions across pgd / CH / RW / Kafka every 2 minutes. Stop releases memory; the airflow-postgres volume keeps run history."
+    enabled_after: check-status
+    detached: true
+    start_command: "stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/setup/olap/start-airflow-demo.sh 2>&1"
+    stop_command: "cd stacks/bfsi-fraud-detection && docker compose stop airflow-webserver airflow-scheduler airflow-init airflow-postgres 2>&1"
+    status_url: "http://127.0.0.1:8888/health"
+    status_field: "metadatabase"
+    last_run_url: "http://127.0.0.1:8888/api/v1/dags/fraud_reconciliation/dagRuns?limit=1&order_by=-end_date"
+    last_run_auth_basic: "admin:admin"
+    last_run_state_path: "dag_runs.0.state"
+    last_run_time_path: "dag_runs.0.end_date"
+  - id: cdc-pause-toggle
+    label_start: "▶ Pause CDC (drift demo)"
+    label_stop: "⏹ Resume CDC"
+    description: "Pauses the Debezium connector so new pgd transactions no longer flow to Kafka / ClickHouse / RisingWave. Within ~2 min the next Airflow reconciliation run will detect drift and turn the grid cell red. Click again to resume; the connector replays from the last offset and the grid heals back to green."
+    enabled_after: check-status
+    start_command: "curl -sS -X PUT http://127.0.0.1:8084/connectors/corebanking-postgres/pause"
+    stop_command: "curl -sS -X PUT http://127.0.0.1:8084/connectors/corebanking-postgres/resume"
+    # Toggle is "running" (showing Resume label, red) when Debezium is PAUSED.
+    # The status endpoint returns {"connector": {"state": "RUNNING|PAUSED"}, ...}
+    status_url: "http://127.0.0.1:8084/connectors/corebanking-postgres/status"
+    status_field: "connector.state"
+    status_value: "PAUSED"
+
+# Usecase 3: ML Fraud Detection
+- id: ml-fraud
+  name: "Usecase 3: Real Time Application (ML Fraud Detector)"
+  flow: |
+    **What this use case shows:** a fraud-detection model trained in Jupyter, registered to MLflow, and served against the live transaction stream — with predictions visible in Metabase next to the OLAP results.
+    1. **Pre-req:** Usecases 1 and 2 should be running. The trainer needs historical TX data; the inference path needs the live feed.
+    2. **Start Service** — runs the training notebook (skipped if a registered model already exists), registers the model to MLflow, sets up the four inference engines (Kafka / PGAA / RisingWave / ClickHouse paths), and applies the ML stage of the Metabase dashboard. Slowest step (~3–5 min cold).
+    3. **Check Status** — verifies the model is registered and predictions are flowing.
+    4. **Reset ML Inference** (optional) — wipes predictions and resets Kafka offsets so you can show a fresh run without re-training the model.
+    5. **Open MLflow Tracking** to see training runs, **Jupyter Notebook** to inspect the trainer, or **Fraud Detection Tab (Metabase)** to see live model predictions.
+  links:
+  - {label: "MLflow Tracking", icon: "🧪", url: "http://127.0.0.1:5001"}
+  - {label: "Jupyter Notebook", icon: "📓", url: "http://127.0.0.1:8889/?token=databox"}
+  - {label: "Fraud Detection Tab (Metabase)", icon: "📊", url: "http://127.0.0.1:3002"}
+  steps:
+  - id: start-service
+    name: "Start Service"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/setup/ml/start-service.sh 2>&1'"
+    # rerun=false (default): once Start Service has succeeded the model is
+    # registered, MVs are created, engines are running, and the Metabase ML
+    # stage is applied. The notebook training is the slow step and is
+    # idempotent — Step skips it if a registered model already exists.
+    # Use Reset ML Inference (below) to wipe predictions without re-training.
+  - id: check-status
+    name: "Check Status"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/status/check-ml.sh 2>&1'"
+    rerun: true
+  - id: reset-ml-inference
+    name: "Reset ML Inference (Clear predictions, reset offsets)"
+    command: "bash stacks/bfsi-fraud-detection/scripts/setup/ml/reset-ml-inference.sh"
+    rerun: true
+
+# Usecase 4: ML Governance (MLflow experiments from Usecase 3)
+- id: ml-governance
+  name: "Usecase 4: ML Governance"
+  flow: |
+    **What this use case shows:** the MLflow side of Usecase 3 — experiment tracking, parameter/metric history, and the model registry that controls which model is in production.
+    1. **Pre-req:** Usecase 3 must have run at least once so there are experiments and a registered model to govern.
+    2. **Start Service** — verifies MLflow is reachable and confirms Usecase 3 has produced experiments + a registered model. Verification only; no new infra. Locks after success.
+    3. **Check Status** — detailed re-runnable summary: number of runs, registered model versions, current stage transitions.
+    4. **Open MLflow Experiments** to inspect runs and compare metrics, or **Model Registry** to see model versions and lifecycle stages.
+  links:
+  - {label: "MLflow Experiments", icon: "🧪", url: "http://127.0.0.1:5001/#/experiments"}
+  - {label: "Model Registry", icon: "📦", url: "http://127.0.0.1:5001/#/models"}
+  steps:
+  - id: start-service
+    name: "Start Service"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/setup/ml-gov/start-service.sh 2>&1'"
+    # rerun=false (default): Start Service is a verification step that
+    # confirms MLflow is up and Usecase 3 has produced experiments + a
+    # registered model. There is no infrastructure to set up here, so once
+    # the verification passes the step is locked. Use Check Status for
+    # detailed re-runnable governance summaries.
+  - id: check-status
+    name: "Check Status"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/status/check-mlgov.sh 2>&1'"
+    rerun: true
+
+# Usecase 5: GenAI Fraud Audit (LangFlow agents - MLflow traces captured in background)
+- id: genai
+  name: "Usecase 5: GenAI Fraud Audit"
+  flow: |
+    **What this use case shows:** a LangFlow agent that audits flagged fraud transactions using AIDB semantic search over historical rules + an Ollama-hosted LLM. Every agent run is captured as an MLflow trace for review.
+    1. **Pre-req:** Usecase 3 should have produced fraud predictions for the agent to audit.
+    2. **Start Service** — provisions the audit schema in pgd, builds AIDB embeddings for the rule corpus on MinIO, configures LangFlow's Ollama connection, and loads the agent flows. One-shot; locks after success (re-running would duplicate flows).
+    3. **Check Status** — verifies AIDB embeddings exist, LangFlow flows are loaded, and Ollama is responsive.
+    4. **Open LangFlow Agent Builder** to inspect/edit the audit flow, or **MLflow Traces** to see captured agent runs.
+  links:
+  - {label: "Open LangFlow Agent Builder", icon: "🤖", url: "http://127.0.0.1:7861"}
+  - {label: "MLflow Traces", icon: "🧪", url: "http://127.0.0.1:5001/#/experiments/1/traces"}
+  steps:
+  - id: start-service
+    name: "Start Service"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/setup/genai/start-service.sh 2>&1'"
+    # rerun=false (default): once Start Service has succeeded the audit
+    # schema, AIDB embeddings, LangFlow Ollama config, and agent flows are
+    # all in place. Re-running would duplicate flows in LangFlow. Use the
+    # specific scripts (setup-aidb-semantic.sh, load-langflow-flows.py)
+    # directly if you need to refresh a single piece.
+  - id: check-status
+    name: "Check Status"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/status/check-genai.sh 2>&1'"
+    rerun: true
+
+# Usecase 6: AI Governance (MLflow traces from Usecase 5 + Evaluation + LLM Judges)
+- id: ai-governance
+  name: "Usecase 6: AI Governance"
+  flow: |
+    **What this use case shows:** evaluation of the Usecase 5 audit agent using LLM-as-judge tests on Anthropic. Each evaluation generates MLflow metrics that prove the agent meets quality bars before promotion.
+    1. **Pre-req:** Usecase 5 should have produced agent traces.
+    2. **Start Service** — wires Anthropic credentials into LangFlow + evaluation-runner. One-shot; locks after success.
+    3. **Check Status** — verifies Anthropic auth and evaluation-runner readiness.
+    4. **Test Agent (Single Question)** — sends one canned audit question to the agent. Fast smoke test.
+    5. **Run Quick Evaluation (3 tests, ~1 min)** — runs the eval notebook against a 3-test subset; metrics land in MLflow.
+    6. **Run Full Evaluation (17 tests, ~10 min)** — full eval suite. Optional; use before claiming a release-ready agent.
+    7. **Open MLflow Traces** to see the agent runs, or **Evaluation Notebook** to inspect the test definitions.
+  links:
+  - {label: "MLflow Traces", icon: "🧪", url: "http://127.0.0.1:5001/#/experiments/1/traces"}
+  - {label: "Evaluation Notebook", icon: "📓", url: "http://127.0.0.1:8889/notebooks/evaluation/ml_audit_evaluation.ipynb?token=databox"}
+  - {label: "Model Registry", icon: "📦", url: "http://127.0.0.1:5001/#/models"}
+  steps:
+  - id: start-service
+    name: "Start Service"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/setup/ai-gov/start-service.sh 2>&1'"
+  - id: check-status
+    name: "Check Status"
+    command: "bash -c 'stdbuf -oL -eL bash stacks/bfsi-fraud-detection/scripts/status/check-ai-gov.sh 2>&1'"
+    rerun: true
+  - id: test-agent-single
+    name: "Test Agent (Single Question)"
+    command: "bash -c 'cd stacks/bfsi-fraud-detection && docker compose run --rm evaluation-runner python ml_audit_agent.py \"What are the current fraud detection metrics?\" 2>&1'"
+    rerun: true
+  - id: run-quick-eval
+    name: "Run Quick Evaluation (3 tests, ~1 min)"
+    command: "bash -c 'cd stacks/bfsi-fraud-detection && docker compose run --rm -e RUN_FULL_EVAL=false evaluation-runner bash -c \"jupyter nbconvert --to notebook --execute --inplace ml_audit_evaluation.ipynb 2>&1 && echo && echo \\\"Quick evaluation complete! View results in MLflow at http://127.0.0.1:5001\\\"\" 2>&1'"
+    rerun: true
+  - id: run-full-eval
+    name: "Run Full Evaluation (17 tests, ~10 min)"
+    command: "bash -c 'cd stacks/bfsi-fraud-detection && docker compose run --rm evaluation-runner bash -c \"sed -i \\\"s/RUN_FULL_EVAL = False/RUN_FULL_EVAL = True/\\\" ml_audit_evaluation.ipynb && jupyter nbconvert --to notebook --execute --inplace ml_audit_evaluation.ipynb 2>&1 && sed -i \\\"s/RUN_FULL_EVAL = True/RUN_FULL_EVAL = False/\\\" ml_audit_evaluation.ipynb && echo && echo \\\"Full evaluation complete! View results in MLflow at http://127.0.0.1:5001\\\"\" 2>&1'"
+    rerun: true
+    optional: true
+

@@ -1,0 +1,46 @@
+{
+  "branches": [
+    {"branch_id": 1, "branch_name": "Downtown Branch", "address": "123 Main St, New York, NY", "phone": "+1-555-0101", "manager": "John Wilson"},
+    {"branch_id": 2, "branch_name": "Uptown Branch", "address": "456 Oak Ave, New York, NY", "phone": "+1-555-0102", "manager": "Sarah Davis"},
+    {"branch_id": 3, "branch_name": "Brooklyn Branch", "address": "789 Brooklyn Blvd, Brooklyn, NY", "phone": "+1-555-0103", "manager": "Mike Johnson"},
+    {"branch_id": 4, "branch_name": "Queens Branch", "address": "321 Queens Dr, Queens, NY", "phone": "+1-555-0104", "manager": "Lisa Chen"},
+    {"branch_id": 5, "branch_name": "Bronx Branch", "address": "654 Bronx St, Bronx, NY", "phone": "+1-555-0105", "manager": "David Martinez"}
+  ],
+  "account_types": [
+    {"account_type_id": 1, "type_name": "Checking", "minimum_balance": 100, "interest_rate": 0.01, "monthly_fee": 10},
+    {"account_type_id": 2, "type_name": "Savings", "minimum_balance": 500, "interest_rate": 0.025, "monthly_fee": 5},
+    {"account_type_id": 3, "type_name": "Premium Checking", "minimum_balance": 2500, "interest_rate": 0.015, "monthly_fee": 0},
+    {"account_type_id": 4, "type_name": "Money Market", "minimum_balance": 10000, "interest_rate": 0.035, "monthly_fee": 0},
+    {"account_type_id": 5, "type_name": "Certificate of Deposit", "minimum_balance": 1000, "interest_rate": 0.045, "monthly_fee": 0}
+  ],
+  "customers": [
+    {"customer_id": 1, "branch_id": 1, "first_name": "Robert", "last_name": "Smith", "email": "robert.smith@email.com", "phone": "+1-555-1001", "address": "100 Park Ave, New York, NY", "date_of_birth": "1985-03-15", "ssn": "XXX-XX-1234"},
+    {"customer_id": 2, "branch_id": 1, "first_name": "Jennifer", "last_name": "Johnson", "email": "jennifer.johnson@email.com", "phone": "+1-555-1002", "address": "200 Park Ave, New York, NY", "date_of_birth": "1990-07-22", "ssn": "XXX-XX-2345"},
+    {"customer_id": 3, "branch_id": 2, "first_name": "Michael", "last_name": "Brown", "email": "michael.brown@email.com", "phone": "+1-555-1003", "address": "300 Fifth Ave, New York, NY", "date_of_birth": "1982-11-10", "ssn": "XXX-XX-3456"},
+    {"customer_id": 4, "branch_id": 2, "first_name": "Emily", "last_name": "Davis", "email": "emily.davis@email.com", "phone": "+1-555-1004", "address": "400 Madison Ave, New York, NY", "date_of_birth": "1988-05-03", "ssn": "XXX-XX-4567"},
+    {"customer_id": 5, "branch_id": 3, "first_name": "William", "last_name": "Wilson", "email": "william.wilson@email.com", "phone": "+1-555-1005", "address": "500 Atlantic Ave, Brooklyn, NY", "date_of_birth": "1975-09-18", "ssn": "XXX-XX-5678"},
+    {"customer_id": 6, "branch_id": 3, "first_name": "Amanda", "last_name": "Taylor", "email": "amanda.taylor@email.com", "phone": "+1-555-1006", "address": "600 Flatbush Ave, Brooklyn, NY", "date_of_birth": "1992-12-25", "ssn": "XXX-XX-6789"}
+  ],
+  "accounts": [
+    {"account_id": 1, "customer_id": 1, "account_type_id": 1, "branch_id": 1, "account_number": "ACC001234567", "balance": 2500.00, "date_opened": "2022-01-15", "status": "active"},
+    {"account_id": 2, "customer_id": 1, "account_type_id": 2, "branch_id": 1, "account_number": "SAV001234567", "balance": 15000.00, "date_opened": "2022-01-15", "status": "active"},
+    {"account_id": 3, "customer_id": 2, "account_type_id": 1, "branch_id": 1, "account_number": "ACC002345678", "balance": 750.00, "date_opened": "2022-03-20", "status": "active"},
+    {"account_id": 4, "customer_id": 3, "account_type_id": 3, "branch_id": 2, "account_number": "PRM003456789", "balance": 5000.00, "date_opened": "2021-11-10", "status": "active"},
+    {"account_id": 5, "customer_id": 4, "account_type_id": 2, "branch_id": 2, "account_number": "SAV004567890", "balance": 12000.00, "date_opened": "2023-02-14", "status": "active"},
+    {"account_id": 6, "customer_id": 5, "account_type_id": 4, "branch_id": 3, "account_number": "MM005678901", "balance": 25000.00, "date_opened": "2022-06-30", "status": "active"},
+    {"account_id": 7, "customer_id": 6, "account_type_id": 1, "branch_id": 3, "account_number": "ACC006789012", "balance": 450.00, "date_opened": "2023-08-05", "status": "active"}
+  ],
+  "transactions": [
+    {"transaction_id": 1, "account_id": 1, "transaction_type": "deposit", "amount": 500.00, "transaction_date": "2024-01-15", "description": "Payroll deposit", "balance_after": 2500.00},
+    {"transaction_id": 2, "account_id": 1, "transaction_type": "withdrawal", "amount": 100.00, "transaction_date": "2024-01-16", "description": "ATM withdrawal", "balance_after": 2400.00},
+    {"transaction_id": 3, "account_id": 2, "transaction_type": "deposit", "amount": 1000.00, "transaction_date": "2024-01-15", "description": "Transfer from checking", "balance_after": 15000.00},
+    {"transaction_id": 4, "account_id": 3, "transaction_type": "deposit", "amount": 250.00, "transaction_date": "2024-01-17", "description": "Direct deposit", "balance_after": 750.00},
+    {"transaction_id": 5, "account_id": 4, "transaction_type": "withdrawal", "amount": 200.00, "transaction_date": "2024-01-18", "description": "Check payment", "balance_after": 4800.00},
+    {"transaction_id": 6, "account_id": 5, "transaction_type": "deposit", "amount": 2000.00, "transaction_date": "2024-01-19", "description": "Bonus deposit", "balance_after": 12000.00}
+  ],
+  "loans": [
+    {"loan_id": 1, "customer_id": 1, "branch_id": 1, "loan_type": "Personal", "principal_amount": 15000.00, "interest_rate": 0.08, "term_months": 36, "monthly_payment": 469.70, "balance_remaining": 12500.00, "loan_date": "2023-06-01", "status": "active"},
+    {"loan_id": 2, "customer_id": 3, "branch_id": 2, "loan_type": "Auto", "principal_amount": 25000.00, "interest_rate": 0.045, "term_months": 60, "monthly_payment": 465.20, "balance_remaining": 20000.00, "loan_date": "2022-09-15", "status": "active"},
+    {"loan_id": 3, "customer_id": 5, "branch_id": 3, "loan_type": "Mortgage", "principal_amount": 300000.00, "interest_rate": 0.035, "term_months": 360, "monthly_payment": 1347.13, "balance_remaining": 285000.00, "loan_date": "2021-12-01", "status": "active"}
+  ]
+}

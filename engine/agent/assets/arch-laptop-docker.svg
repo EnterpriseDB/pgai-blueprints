@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 700" font-family="-apple-system, BlinkMacSystemFont, sans-serif">
+  <defs>
+    <marker id="ar" markerWidth="14" markerHeight="14" refX="11" refY="4" orient="auto">
+      <path d="M0,0 L0,8 L11,4 z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1400" height="700" fill="#ffffff"/>
+
+  <text x="700" y="44" text-anchor="middle" font-size="24" font-weight="700" fill="#0f172a">Deploying stacks via Docker Compose on your laptop</text>
+  <text x="700" y="74" text-anchor="middle" font-size="16" fill="#64748b">Any stack with a docker-compose.yaml runs entirely on your Mac. No cloud involved.</text>
+
+  <rect x="60" y="110" width="1280" height="490" rx="14" fill="#f0f9ff" stroke="#0284c7" stroke-width="3"/>
+  <text x="90" y="148" font-size="20" font-weight="700" fill="#075985">YOUR MAC</text>
+  <text x="90" y="172" font-size="13" fill="#075985">macOS host · Docker Desktop installed · localhost networking</text>
+
+  <rect x="100" y="210" width="220" height="170" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="3"/>
+  <text x="210" y="248" text-anchor="middle" font-size="44" font-weight="700" fill="#7c3aed">1</text>
+  <text x="210" y="290" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">You</text>
+  <text x="210" y="318" text-anchor="middle" font-size="14" fill="#475569">browser</text>
+  <text x="210" y="352" text-anchor="middle" font-size="14" fill="#475569">click "Deploy"</text>
+
+  <line x1="330" y1="295" x2="400" y2="295" stroke="#475569" stroke-width="3" marker-end="url(#ar)"/>
+
+  <rect x="410" y="210" width="220" height="170" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+  <text x="520" y="248" text-anchor="middle" font-size="44" font-weight="700" fill="#2563eb">2</text>
+  <text x="520" y="290" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">diab agent</text>
+  <text x="520" y="318" text-anchor="middle" font-size="14" fill="#475569">reads docker-compose.yaml</text>
+  <text x="520" y="352" text-anchor="middle" font-size="14" fill="#475569">runs docker compose up</text>
+
+  <line x1="640" y1="295" x2="710" y2="295" stroke="#475569" stroke-width="3" marker-end="url(#ar)"/>
+
+  <rect x="720" y="210" width="220" height="170" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="3"/>
+  <text x="830" y="248" text-anchor="middle" font-size="44" font-weight="700" fill="#d97706">3</text>
+  <text x="830" y="290" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Docker daemon</text>
+  <text x="830" y="318" text-anchor="middle" font-size="14" fill="#475569">builds + pulls images</text>
+  <text x="830" y="352" text-anchor="middle" font-size="14" fill="#475569">starts containers</text>
+
+  <line x1="950" y1="295" x2="1020" y2="295" stroke="#475569" stroke-width="3" marker-end="url(#ar)"/>
+
+  <rect x="1030" y="210" width="280" height="170" rx="10" fill="#dcfce7" stroke="#059669" stroke-width="3"/>
+  <text x="1170" y="248" text-anchor="middle" font-size="44" font-weight="700" fill="#059669">4</text>
+  <text x="1170" y="290" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Stack containers</text>
+  <text x="1170" y="318" text-anchor="middle" font-size="14" fill="#475569">whatever services your</text>
+  <text x="1170" y="352" text-anchor="middle" font-size="14" fill="#475569">compose file defines</text>
+
+  <path d="M 1170 380 L 1170 460 L 210 460 L 210 380" fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="6,4" marker-end="url(#ar)"/>
+  <text x="690" y="455" text-anchor="middle" font-size="15" font-weight="600" fill="#7c3aed">5. You open service URLs in your browser</text>
+  <text x="690" y="478" text-anchor="middle" font-size="13" fill="#7c3aed">http://127.0.0.1:&lt;port&gt; — whichever ports the compose exposes</text>
+
+  <rect x="100" y="510" width="1210" height="70" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.5"/>
+  <text x="120" y="535" font-size="14" font-weight="700" fill="#854d0e">Storage &amp; data</text>
+  <text x="120" y="557" font-size="13" fill="#1e293b">Service data lives in Docker-managed volumes. Bind mounts let you edit local files without rebuilding the image.</text>
+  <text x="120" y="574" font-size="13" fill="#1e293b">Cloud credentials (e.g. AWS) typically read from ~/.aws bind-mounted into the relevant container.</text>
+
+  <text x="700" y="650" text-anchor="middle" font-size="14" fill="#475569">Heavy stacks may need ≥16 GB allocated to Docker Desktop — see the stack's README for sizing.</text>
+  <text x="700" y="675" text-anchor="middle" font-size="13" font-style="italic" fill="#94a3b8">No external services — your Mac is the whole story.</text>
+</svg>

@@ -1,0 +1,525 @@
+Fraud Detection Rule: FR-STRIPE-001
+Rule Name: France Stripe Transaction Rules
+Region: France (FR)
+Payment Vendor: Stripe
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors Stripe transactions in France with focus on e-commerce fraud, French consumer protection compliance (Code de la consommation), SEPA payment fraud, and patterns specific to the French digital commerce market including sophisticated card-not-present fraud and social engineering attacks.
+
+RULE PARAMETERS
+- Threshold Amount: €4,000 EUR (approximately $4,350 USD)
+- Risk Score Threshold: 0.70
+- Action: Review (mandatory review with compliance verification)
+- Category: Transaction Limit and E-Commerce Protection
+- Regulatory Framework: ACPR, Code de la consommation, PSD2, RGPD (GDPR)
+
+RULE DESCRIPTION
+France has one of Europe's largest e-commerce markets with sophisticated consumers who benefit from strong legal protections. However, this also creates opportunities for organized fraud including card testing, account takeovers, and elaborate phishing schemes. This rule balances fraud prevention with French regulatory compliance and consumer expectations.
+
+FRENCH E-COMMERCE LANDSCAPE
+
+MARKET CHARACTERISTICS:
+- Large and mature e-commerce market
+- Strong preference for French websites and French language
+- Carte Bancaire (CB) most common payment method
+- SEPA credit transfer gaining popularity
+- Strong consumer rights culture
+- High chargeback rates compared to some markets
+
+KEY E-COMMERCE PLAYERS:
+- Amazon.fr (dominant marketplace)
+- Cdiscount (major French retailer)
+- Fnac, Darty (electronics)
+- Leboncoin (classifieds - but PayPal more common there)
+- Numerous specialized French online retailers
+
+REGULATORY ENVIRONMENT:
+- ACPR (Autorité de Contrôle Prudentiel et de Résolution)
+- DGCCRF (consumer protection)
+- CNIL (data protection - RGPD/GDPR enforcement)
+- Code de la consommation (Consumer Code)
+- Droit de rétractation (14-day withdrawal right)
+- Garantie légale de conformité (2-year warranty)
+
+PAYMENT METHODS IN FRANCE:
+- Carte Bancaire (CB) - French bank card system
+- SEPA credit transfer (virement SEPA)
+- Credit cards (Visa, Mastercard)
+- Digital wallets (Apple Pay, Google Pay growing)
+- PayPal (common for marketplaces)
+- Buy Now Pay Later (Klarna, etc.)
+
+TRIGGERING CONDITIONS
+
+This rule triggers when:
+1. Stripe transaction from French customer or merchant ≥ €4,000
+2. Transaction involves French card or French merchant
+3. Fraud risk score ≥ 0.70
+4. E-commerce compliance concerns
+
+OR special conditions:
+5. Card testing pattern detected
+6. First high-value transaction (≥ €2,000) on new account
+7. Cross-border EU transaction with elevated risk
+8. Merchant non-compliance with French regulations
+9. Account takeover indicators
+10. SEPA Direct Debit fraud pattern
+
+RISK SCORE CALCULATION
+
+BASE FRENCH STRIPE RISK: 0.18
+Moderate baseline reflecting mature market with some fraud
+
+MERCHANT COMPLIANCE (+0.00 to +0.40):
+- Missing mentions légales (legal information): +0.35
+- No droit de rétractation information: +0.30
+- Website not in French (if targeting France): +0.25
+- No SIRET number displayed: +0.30
+- Unclear pricing or hidden costs: +0.20
+- New/unverified merchant: +0.30
+
+TRANSACTION CHARACTERISTICS (+0.00 to +0.30):
+- Amount >3x customer average: +0.25
+- High-risk product (electronics, luxury, crypto): +0.20
+- Digital goods (limited withdrawal rights): +0.15
+- International shipping: +0.20
+- Expedited shipping selected: +0.15
+- Multiple items, different categories: +0.20
+
+CUSTOMER INDICATORS (+0.00 to +0.30):
+- New Stripe customer (<30 days): +0.20
+- No order history: +0.15
+- Recent account changes (email, card, address): +0.20
+- Multiple failed payment attempts: +0.20
+- Email not matching name/address: +0.15
+
+DEVICE AND LOCATION (+0.00 to +0.20):
+- VPN or proxy detected: +0.20
+- Device fingerprint never seen: +0.15
+- Location doesn't match billing address: +0.20
+- Multiple accounts from same device: +0.20
+- Emulator or suspicious device: +0.25
+
+Example Score:
+- Base risk: 0.18
+- No mentions légales: +0.35
+- Amount 4x average: +0.25
+- New customer: +0.20
+- VPN detected: +0.20
+- Multiple failed attempts: +0.20
+- Total: 1.38 → BLOCK and investigate
+
+FRAUD SCENARIOS SPECIFIC TO FRENCH STRIPE
+
+SCENARIO 1: TEST DE CARTE (CARD TESTING)
+Description: Criminals test stolen card numbers through French e-commerce sites.
+
+Pattern:
+- Multiple small transactions (€1-€10)
+- Rapid succession of attempts
+- Different cards from same device/IP
+- Digital goods or small physical items
+- French sites targeted due to high success rate
+- Once card validated, larger purchases attempted
+
+Example:
+- French electronics site using Stripe
+- 50 transactions attempted in 10 minutes
+- Amounts: €2-€5 each
+- Products: Digital gift cards
+- Cards: Various French and international cards
+- Success rate: 15%
+- Risk Score: 0.95 per pattern
+- Action: BLOCK transaction stream, rate limit by IP/device, alert merchant to secure checkout
+
+SCENARIO 2: COMPTE PIRATÉ (ACCOUNT TAKEOVER)
+Description: Criminal gains access to legitimate French customer account.
+
+Pattern:
+- Login from new device/location
+- Password recently changed
+- Shipping address changed to different region
+- High-value order placed immediately
+- Payment method may be changed
+- Customer unaware until too late
+
+Example:
+- Customer: Paris resident, 3 years order history
+- Compromise: Phishing email or credential stuffing
+- Takeover: Login from Marseille, new device
+- Action: €3,500 purchase of smartphones
+- Ship to: Different address in Marseille
+- Risk Score: 0.89
+- Action: HOLD order, contact customer via verified phone/email, require additional authentication
+
+SCENARIO 3: FAUX SITE E-COMMERCE (FAKE E-COMMERCE SITE)
+Description: Professional fake French online store using Stripe.
+
+Pattern:
+- Well-designed French-language site
+- Sells popular products at attractive prices
+- Uses Stripe for legitimacy
+- Collects payments but never ships
+- Or ships counterfeit goods
+- Site disappears after period
+
+Example:
+- Website: "mode-luxe-paris.fr"
+- Products: Designer handbags, watches
+- Pricing: 30% below retail
+- Transaction: €2,800 for Hermès bag
+- Red flags: Domain 6 weeks old, no SIRET, fake address in mentions légales
+- Customer never receives item or receives fake
+- Risk Score: 0.87
+- Action: HOLD transaction, verify merchant legitimacy, check SIRET registry, verify physical address
+
+SCENARIO 4: FRAUDE AMICALE (FRIENDLY FRAUD / CHARGEBACK ABUSE)
+Description: Customer makes legitimate purchase but disputes charge.
+
+French Context:
+- Strong consumer protection creates opportunity
+- Customer may exploit droit de rétractation
+- Claims "item not received" or "unauthorized"
+- Merchant loses both product and payment
+
+Pattern:
+- Legitimate transaction processed
+- Customer receives goods
+- Customer files chargeback claiming fraud or non-delivery
+- Or claims warranty issue and disputes charge
+- May be organized fraud ring
+
+Example:
+- Customer: Orders €1,500 laptop
+- Delivery: Confirmed delivery with signature
+- Two weeks later: Chargeback filed "unauthorized transaction"
+- Reality: Customer received laptop and is using it
+- Risk Score: 0.70 (hard to detect proactively)
+- Action: Merchant must provide strong evidence (delivery confirmation, signature, IP match)
+
+SCENARIO 5: PHISHING "STRIPE SECURITY"
+Description: Phishing campaign targeting French Stripe merchant accounts.
+
+Pattern:
+- Email claiming "Stripe security issue"
+- Professional French language
+- Requests login to "verify account"
+- Fake Stripe login page
+- Steals merchant credentials
+- Used to process fraudulent refunds or access funds
+
+Example:
+- Target: French Stripe merchants
+- Email: "Stripe: Activité suspecte détectée sur votre compte"
+- Link: stripe-verification-fr[.]com (fake domain)
+- If compromised: Fraudulent refunds issued, funds stolen
+- Risk Score: Merchant account takeover
+- Action: If detected, freeze account, force password reset, enable 2FA, contact merchant
+
+SCENARIO 6: SEPA LASTSCHRIFT FRAUD
+Description: Fraudulent SEPA Direct Debit mandates or unauthorized charges.
+
+French Context:
+- SEPA common for subscriptions
+- Prélèvement SEPA (French term)
+- Confusion about authorization
+- Dark patterns in signup flows
+
+Pattern:
+- Customer signs up for "free trial"
+- Provides IBAN for "verification"
+- Unclear that SEPA mandate being authorized
+- Unexpected recurring charges
+- Difficult cancellation process
+
+Example:
+- Customer: Signs up for streaming service "essai gratuit"
+- Provides IBAN in tiny checkbox labeled "autoriser prélèvement"
+- Charged: €79.99/month after 7 days
+- Customer: Didn't realize they authorized ongoing payments
+- Risk Score: 0.72
+- Action: Review mandate clarity, ensure clear authorization, verify cancellation process exists
+
+SCENARIO 7: ARNAQUE À L'INVESTISSEMENT (INVESTMENT SCAM)
+Description: Fake investment platform using Stripe for deposits.
+
+Pattern:
+- Professional platform claiming French regulation
+- Promises high returns (crypto, forex, binary options)
+- Claims "AMF-agréé" (approved by French financial regulator - false)
+- Accepts deposits via Stripe
+- Shows fake profits initially
+- Unable to withdraw funds
+
+Example:
+- Platform: "InvestFrance-Pro"
+- Claims: "Régulé par l'AMF, 12% rendement mensuel garanti"
+- Transaction: €10,000 initial investment
+- Red flags: AMF registration fake, guaranteed returns impossible, pressure tactics
+- Risk Score: 0.93
+- Action: BLOCK, verify with AMF registry, educate customer, report to ACPR
+
+SCENARIO 8: ARNAQUE À LA LIVRAISON (DELIVERY REDIRECT SCAM)
+Description: Fraudster intercepts package by changing delivery address.
+
+Pattern:
+- Legitimate purchase initiated
+- Fraudster contacts courier or merchant
+- Claims need to redirect delivery
+- Uses social engineering
+- Package delivered to fraudster
+- Original customer and merchant both victims
+
+Example:
+- Customer: Orders €2,200 camera equipment
+- Fraudster: Calls merchant, claims "je suis le client, changement d'adresse"
+- New address: Different city
+- Package: Delivered to fraudster
+- Customer: Never receives item
+- Risk Score: 0.80
+- Action: Verify address changes via customer account only, never by phone, require authentication
+
+FRENCH CONSUMER PROTECTION COMPLIANCE
+
+DROIT DE RÉTRACTATION (14-DAY WITHDRAWAL RIGHT):
+Applies to all distance sales (online):
+- Customer can cancel within 14 days without reason
+- Period starts from delivery
+- Full refund within 14 days of notification
+- Customer returns at own expense (unless otherwise agreed)
+- Exceptions: Perishables, personalized, sealed media (if opened), accommodation, tickets
+
+Merchant obligations:
+- Clearly inform customer of right
+- Provide standard withdrawal form
+- Include in terms and conditions
+- Email confirmation with information
+- Process refund promptly
+
+This rule verifies merchant compliance.
+
+MENTIONS LÉGALES (LEGAL INFORMATION):
+All French e-commerce sites must display:
+- Legal name and form (SARL, SAS, etc.)
+- SIRET number (French business registry)
+- Registered office address (not P.O. box)
+- Contact details (phone, email)
+- VAT number if applicable
+- Host provider information
+- If professional: professional body, rules, insurance
+
+This rule checks for compliant mentions légales.
+
+GARANTIE LÉGALE DE CONFORMITÉ:
+2-year legal warranty automatically applies:
+- Product must conform to description
+- Must be fit for intended purpose
+- Defects within 24 months presumed present at delivery (first 6 months automatic, 6-24 months customer must prove)
+- Customer can choose repair or replacement
+- If impossible, price reduction or refund
+
+Merchant must honor warranty rights.
+
+CGV (CONDITIONS GÉNÉRALES DE VENTE):
+Terms and conditions must include:
+- Product characteristics
+- Total price including taxes
+- Delivery costs and timeframes
+- Payment methods accepted
+- Droit de rétractation details
+- Warranty information
+- Dispute resolution process
+- Must be accepted before order finalized
+
+TRANSPARENCY OBLIGATIONS:
+- Total price must be clear (TTC - Toutes Taxes Comprises)
+- Delivery costs shown before final validation
+- No hidden costs permitted
+- Countdown timers or pressure tactics regulated
+- Stock availability must be accurate
+
+STRONG CUSTOMER AUTHENTICATION (SCA)
+
+PSD2 IN FRANCE:
+- 3D Secure 2.0 widely adopted
+- French banks actively enforce SCA
+- SMS OTP, mobile app, or biometric
+- Required for >€30 transactions (typically)
+- Merchants must implement properly
+
+EXEMPTIONS:
+- Low-risk transactions (merchant fraud rate dependent)
+- Trusted beneficiaries (whitelisted merchants)
+- Recurring payments (after first SCA)
+- Low-value transactions
+
+This rule monitors:
+- Failed SCA leading to suspicious retries
+- Attempts to bypass SCA requirements
+- New cards/customers requiring enhanced auth
+
+AUTOMATED RESPONSE ACTIONS
+
+WHEN SCORE 0.70-0.80 (Medium-High Risk):
+1. Flag for review by French fraud team
+2. Verify merchant compliance (mentions légales, CGV, droit de rétractation)
+3. Confirm customer identity and intent
+4. Check delivery address legitimacy
+5. Ensure SCA completed properly
+6. Proceed if satisfactory
+
+WHEN SCORE 0.80-0.90 (High Risk):
+1. HOLD transaction for manual approval
+2. Contact customer via verified channel
+3. Enhanced merchant verification
+4. Check SIRET registry for merchant
+5. Verify not account takeover
+6. Block if unable to verify or customer unresponsive
+
+WHEN SCORE > 0.90 (Critical Risk):
+1. BLOCK transaction immediately
+2. Contact customer with fraud alert (French)
+3. Provide scam-specific education
+4. Report to DGCCRF if merchant fraud
+5. Report to Pharos if customer victimization
+6. Freeze account if takeover suspected
+7. Alert merchant if merchant is victim
+
+CUSTOMER COMMUNICATION (FRENCH)
+
+TRANSACTION HOLD MESSAGE:
+"⚠️ TRANSACTION EN ATTENTE - VÉRIFICATION DE SÉCURITÉ
+
+Nous avons détecté des signaux de risque sur cette transaction:
+• [Détails spécifiques]
+
+Veuillez confirmer:
+✓ Vous avez initié cette transaction
+✓ Le marchand affiche des mentions légales complètes (SIRET, adresse, etc.)
+✓ Vous avez bien compris le prix total et les frais de livraison
+✓ Vous connaissez votre droit de rétractation (14 jours)
+✓ Vous n'êtes pas sous pression pour payer rapidement
+
+Important: Vérifiez toujours le numéro SIRET du marchand sur societe.com
+
+Questions? Contactez le support Stripe ou signalez sur signal-arnaques.com"
+
+FAKE MERCHANT WARNING:
+"⚠️ ATTENTION - MARCHAND POTENTIELLEMENT FRAUDULEUX
+
+Ce site présente des caractéristiques d'un faux site marchand:
+✗ Mentions légales absentes ou invalides
+✗ Numéro SIRET inexistant ou faux
+✗ Prix anormalement bas
+✗ Site récemment créé
+✗ Aucun avis client vérifiable
+
+AVANT DE CONTINUER:
+1. Vérifiez le SIRET sur societe.com
+2. Recherchez des avis indépendants
+3. Contactez le service client pour vérifier
+4. Méfiez-vous des prix trop attractifs
+
+En cas de doute, NE PAYEZ PAS.
+Signalez sur: signal-arnaques.com ou Pharos (interieur.gouv.fr)"
+
+INTEGRATION WITH FRENCH AUTHORITIES
+
+DGCCRF:
+- Consumer protection enforcement
+- Merchant compliance investigations
+- Can fine non-compliant merchants
+- Coordinate fraud prosecutions
+
+PHAROS:
+- Government platform for reporting internet content
+- Managed by Ministry of Interior
+- Report e-commerce fraud
+- Report phishing/scam sites
+
+ACPR:
+- Payment services regulator
+- Oversees Stripe operations in France
+- Handles serious complaints
+- Enforcement actions
+
+AMF (AUTORITÉ DES MARCHÉS FINANCIERS):
+- Financial markets regulator
+- Investment fraud investigations
+- Maintains blacklist of unauthorized firms
+- Verify investment platforms
+
+OCLCTIC (OFFICE CENTRAL DE LUTTE CONTRE LA CRIMINALITÉ LIÉE AUX TECHNOLOGIES DE L'INFORMATION ET DE LA COMMUNICATION):
+- Cybercrime unit under Gendarmerie Nationale
+- Investigate e-commerce fraud
+- International coordination
+
+INFO ESCROQUERIES:
+- Hotline: 0 805 805 817 (free)
+- Advice about scams
+- Victim support
+
+SOCIETE.COM / INFOGREFFE:
+- SIRET verification
+- Company registration details
+- Verify merchant legitimacy
+
+EXAMPLES
+
+Example 1 - Legitimate Purchase (APPROVE):
+- Customer: Lyon, established account
+- Merchant: Reputable French electronics retailer (verified SIRET)
+- Transaction: €3,400 for laptop
+- Compliance: Complete mentions légales, clear CGV, droit de rétractation info
+- Risk Score: 0.48
+- Action: APPROVE with reminder about warranty rights
+
+Example 2 - Fake Site (BLOCK):
+- Customer: Paris
+- Merchant: "smartphones-discount-france.com"
+- Transaction: €2,800 for iPhone
+- Red flags: SIRET invalid, domain 4 weeks old, price 40% below retail, no phone contact
+- Risk Score: 0.92
+- Action: BLOCK, warn customer, report to DGCCRF
+
+Example 3 - Account Takeover (HOLD):
+- Customer: Toulouse, 2 years history
+- Suspicious: Login from Lille (new city), new device, password just changed
+- Transaction: €4,200 for gaming equipment
+- Ship to: New address in Lille
+- Risk Score: 0.88
+- Action: HOLD order, contact customer via verified phone, require additional auth
+
+Example 4 - Investment Scam (BLOCK):
+- Customer: Nice
+- Platform: "CryptoInvestFrance"
+- Transaction: €15,000 deposit
+- Red flags: Not registered with AMF, guaranteed returns promised, pressure tactics
+- Risk Score: 0.96
+- Action: BLOCK, verify with AMF, educate about investment fraud, report to ACPR
+
+RELATED RULES
+- FR-PAYPAL-001: Cross-vendor French protection
+- GLOBAL-001: High-value threshold (€10,000+)
+- EU-wide e-commerce fraud detection
+
+PERFORMANCE METRICS
+- Fake Site Detection: > 85%
+- Account Takeover Prevention: > 78%
+- Card Testing Prevention: > 95%
+- False Positive Rate: < 14%
+- Merchant Compliance: 100% verification for flagged transactions
+- Average Review Time: < 30 minutes
+
+TRAINING REQUIREMENTS
+French Stripe fraud analysts must complete:
+- Code de la consommation
+- E-commerce regulations (CGV, mentions légales)
+- Droit de rétractation and garantie légale
+- SIRET verification techniques
+- French language (fluency required)
+- PSD2 and SCA requirements
+- RGPD/GDPR compliance
+- French business culture
+- Coordination with DGCCRF and ACPR

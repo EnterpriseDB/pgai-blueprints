@@ -1,0 +1,23 @@
+{
+  "model_name": "mule",
+  "description": "Mule Account Detection and Fraud Prevention System",
+  "tables": {
+    "customers": {"primary_key": "customer_id"},
+    "accounts": {"primary_key": "account_id", "foreign_keys": {"customer_id": "customers.customer_id"}},
+    "transactions": {"primary_key": "transaction_id", "foreign_keys": {"from_account_id": "accounts.account_id", "to_account_id": "accounts.account_id"}},
+    "fraud_rules": {"primary_key": "rule_id"},
+    "fraud_alerts": {"primary_key": "alert_id", "foreign_keys": {"account_id": "accounts.account_id", "rule_id": "fraud_rules.rule_id", "transaction_id": "transactions.transaction_id"}},
+    "investigations": {"primary_key": "investigation_id", "foreign_keys": {"account_id": "accounts.account_id", "alert_id": "fraud_alerts.alert_id"}},
+    "suspicious_patterns": {"primary_key": "pattern_id", "foreign_keys": {"account_id": "accounts.account_id"}}
+  },
+  "relationships": [
+    {"parent": "customers", "child": "accounts"},
+    {"parent": "accounts", "child": "transactions"},
+    {"parent": "accounts", "child": "fraud_alerts"},
+    {"parent": "accounts", "child": "investigations"},
+    {"parent": "accounts", "child": "suspicious_patterns"},
+    {"parent": "fraud_rules", "child": "fraud_alerts"},
+    {"parent": "transactions", "child": "fraud_alerts"},
+    {"parent": "fraud_alerts", "child": "investigations"}
+  ]
+}

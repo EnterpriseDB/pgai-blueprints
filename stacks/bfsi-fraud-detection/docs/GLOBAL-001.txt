@@ -1,0 +1,279 @@
+Fraud Detection Rule: GLOBAL-001
+Rule Name: Global High-Value Transaction Review
+Region: GLOBAL (All Regions)
+Payment Vendor: All Vendors
+Effective Date: January 1, 2024
+
+OVERVIEW
+This is a universal rule that applies across all regions and payment vendors to detect and review exceptionally high-value transactions that may indicate fraud, money laundering, or other financial crimes. This rule serves as a final safety net regardless of regional rules.
+
+RULE PARAMETERS
+- Threshold Amount: $10,000.00 USD (or equivalent in local currency)
+- Risk Score Threshold: 0.50
+- Action: Review (mandatory human review)
+- Category: HITL Threshold (Human-in-the-Loop)
+- Review SLA: 1 hour during business hours, 4 hours outside business hours
+
+RULE DESCRIPTION
+Any transaction exceeding $10,000 USD requires mandatory human review before processing, regardless of other risk indicators. This rule ensures that large financial transactions receive appropriate scrutiny and helps meet regulatory requirements for anti-money laundering (AML) and know-your-customer (KYC) compliance.
+
+CURRENCY CONVERSION
+Amounts in foreign currencies are converted to USD at real-time exchange rates for threshold comparison:
+- €10,000 EUR ≈ $10,800 USD → Triggers review
+- £10,000 GBP ≈ $12,500 USD → Triggers review
+- $15,000 CAD ≈ $11,000 USD → Triggers review
+- ¥1,500,000 JPY ≈ $10,100 USD → Triggers review
+
+Exchange rates updated hourly from reliable financial data sources.
+
+TRIGGERING CONDITIONS
+Transaction triggers this rule when ALL of the following are true:
+1. Transaction amount ≥ $10,000 USD (or equivalent)
+2. Calculated fraud score ≥ 0.50 (moderate risk or higher)
+3. Transaction not on pre-approved high-value customer list
+
+REVIEW REQUIREMENTS
+
+TIER 1 REVIEW ($10,000 - $24,999):
+- Verify customer identity and account status
+- Review transaction history and patterns
+- Confirm merchant legitimacy
+- Check for geographic consistency
+- Validate payment method and source of funds
+- Review time: 15-30 minutes
+
+TIER 2 REVIEW ($25,000 - $49,999):
+- All Tier 1 requirements PLUS:
+- Senior fraud analyst approval required
+- Enhanced due diligence on customer
+- Source of funds verification
+- Beneficial owner identification
+- Review time: 30-60 minutes
+
+TIER 3 REVIEW ($50,000+):
+- All Tier 1 and 2 requirements PLUS:
+- Fraud manager approval required
+- Possible customer interview
+- Bank reference verification
+- Consider filing Currency Transaction Report (CTR) if applicable
+- Legal/compliance team notification
+- Review time: 1-4 hours
+
+FRAUD RISK FACTORS
+Higher scrutiny applied when combined with:
+
+HIGH-RISK INDICATORS:
+- New customer account (< 30 days old)
+- First transaction on account
+- International transaction to high-risk country
+- High-risk merchant category (crypto, gambling, money services)
+- Unusual for customer's profile or income level
+- Multiple payment methods used
+- Rushed delivery or pickup request
+- Customer reluctant to provide information
+
+MEDIUM-RISK INDICATORS:
+- Customer has transaction history but amount is significantly higher than usual
+- Cross-border transaction to moderate-risk country
+- Business hours transaction from business account
+- Merchant in retail or professional services
+- Customer responsive and provides documentation
+
+LOW-RISK INDICATORS:
+- Established customer with long history
+- Transaction consistent with customer profile
+- Domestic transaction
+- Reputable merchant
+- Standard delivery method
+- Customer has high credit limit or verified income
+
+EXAMPLES
+
+Example 1 - Suspicious High-Value Transaction (BLOCK):
+- Amount: $15,000 purchase of cryptocurrency
+- Customer: Account created 5 days ago
+- History: No previous transactions
+- Payment: Multiple credit cards used
+- Location: VPN/proxy detected
+- Merchant: Unlicensed crypto exchange
+- Customer contact: Unresponsive to verification request
+
+Risk Score: 0.95
+Action: BLOCK transaction, freeze account, file Suspicious Activity Report (SAR)
+
+Example 2 - Legitimate Business Transaction (APPROVE):
+- Amount: $18,500 purchase of office equipment
+- Customer: Established business, 4 years history
+- History: Regular purchases of $5,000-$10,000
+- Payment: Business credit card
+- Location: Company headquarters address
+- Merchant: Authorized Dell/HP reseller
+- Documentation: Purchase order provided
+
+Risk Score: 0.35 (below 0.50 threshold, but still reviewed due to amount)
+Action: APPROVE after 20-minute review
+
+Example 3 - Wire Fraud Attempt (BLOCK):
+- Amount: $25,000 wire transfer
+- Customer: Senior citizen, retired teacher
+- Trigger: Customer contacted claiming "IRS debt" needs immediate payment
+- Pattern: Highly unusual for customer
+- Red flags: Urgency, threat of arrest, unusual beneficiary
+- Merchant: Unknown money transfer service
+
+Risk Score: 0.88
+Action: BLOCK immediately, contact customer, report to authorities
+
+Example 4 - Luxury Purchase (APPROVE with verification):
+- Amount: $12,000 designer handbag purchase
+- Customer: High-income professional, verified salary $250K+
+- History: Previous luxury purchases of $3,000-$8,000
+- Payment: Personal credit card with $50K limit
+- Location: Customer's home address in Beverly Hills
+- Merchant: Legitimate luxury retailer (Neiman Marcus)
+
+Risk Score: 0.52
+Action: Quick verification call to customer, APPROVE
+
+REGULATORY COMPLIANCE
+
+BANK SECRECY ACT (BSA):
+- Transactions ≥ $10,000 may require Currency Transaction Report (CTR)
+- File CTR within 15 days of transaction
+- Multiple related transactions (structuring) also reportable
+
+SUSPICIOUS ACTIVITY REPORT (SAR):
+- File SAR if transaction appears suspicious regardless of amount
+- SAR deadline: 30 days from detection
+- Do not notify customer that SAR was filed
+
+KNOW YOUR CUSTOMER (KYC):
+- Enhanced due diligence for high-value customers
+- Verify identity, address, source of funds
+- Ongoing monitoring requirements
+
+ANTI-MONEY LAUNDERING (AML):
+- Screen against OFAC and sanctions lists
+- Identify politically exposed persons (PEPs)
+- Monitor for layering and integration patterns
+
+OFFICE OF FOREIGN ASSETS CONTROL (OFAC):
+- Screen transactions against SDN list
+- Block transactions to sanctioned countries/entities
+- Report blocked transactions within 10 days
+
+INTERNATIONAL CONSIDERATIONS
+
+HIGH-RISK COUNTRIES (Enhanced scrutiny):
+- Countries on FATF blacklist or greylist
+- Sanctions-restricted countries
+- Known money laundering havens
+- High corruption index countries
+
+SPECIAL RULES BY REGION:
+- European Union: GDPR compliance for data handling
+- United Kingdom: FCA regulations, £10,000 threshold
+- Canada: FINTRAC reporting requirements
+- Australia: AUSTRAC transaction reporting
+
+CROSS-BORDER TRANSACTIONS:
+- Additional documentation required
+- Purpose of transaction verification
+- Relationship between sender and recipient
+- Expected future transaction patterns
+
+INTEGRATION WITH OTHER SYSTEMS
+
+VELOCITY CHECKING:
+- Multiple high-value transactions in short time period
+- Aggregate transactions approaching regulatory thresholds
+- Pattern of transactions just below reporting limits (structuring)
+
+CUSTOMER RISK RATING:
+- Low-risk customers: Simplified review process
+- Medium-risk: Standard review procedures
+- High-risk: Enhanced due diligence required
+- Adjust risk rating based on transaction patterns
+
+MERCHANT MONITORING:
+- Merchants with high chargeback rates get additional scrutiny
+- Newly registered merchants flagged for review
+- Merchant category code (MCC) risk assessment
+
+ALLOWLISTING
+
+PRE-APPROVED HIGH-VALUE CUSTOMERS:
+Customers may be allowlisted for expedited review when they:
+- Have 2+ years of transaction history
+- Regularly process high-value transactions
+- Maintain excellent account standing
+- Provide enhanced verification (income documentation, bank references)
+- Accept ongoing monitoring requirements
+
+Allowlisted customers still require review but with shorter SLA (15 minutes vs. 1 hour).
+
+PERFORMANCE METRICS
+Target operational metrics:
+- Legitimate Transaction Approval Rate: > 95%
+- False Positive Rate: < 10%
+- Review Time (Tier 1): < 30 minutes average
+- Customer Satisfaction: Minimal friction for legitimate customers
+- Fraud Detection Rate: > 85% for actual fraud
+- Compliance Rate: 100% of required reports filed on time
+
+ESCALATION PROCEDURES
+
+IMMEDIATE ESCALATION to Fraud Manager:
+- Amount exceeds $100,000
+- Suspected money laundering or terrorist financing
+- Politically exposed person (PEP) involved
+- Customer threatens legal action
+- Media or reputational risk
+
+ESCALATION to Legal/Compliance:
+- Regulatory inquiry or subpoena
+- Pattern suggests organized fraud ring
+- Cross-border sanctions concerns
+- Unusual transaction structure suggesting tax evasion
+
+LAW ENFORCEMENT CONTACT:
+- Active fraud in progress
+- Threats of violence
+- Suspected human trafficking or illegal goods
+- Elder abuse or vulnerable victim
+
+CUSTOMER COMMUNICATION
+
+Email Notification Template:
+"Thank you for your purchase of $[AMOUNT]. To ensure your security, we need to verify this transaction. Please call us at [PHONE] or click [LINK] to complete verification. Your transaction will be processed once verification is complete. This typically takes 15-30 minutes."
+
+Phone Script for Verification:
+"Hello [NAME], this is [ANALYST] from [COMPANY] fraud prevention. We noticed a transaction of $[AMOUNT] on your account. For your security, we need to verify some information. This will only take a few minutes..."
+
+Questions to Ask:
+1. Did you authorize this transaction?
+2. Can you describe what you purchased?
+3. Have you purchased from this merchant before?
+4. What is the source of funds for this purchase?
+5. Are you under any pressure to make this payment?
+
+TRAINING REQUIREMENTS
+Analysts reviewing high-value transactions must complete:
+- AML/BSA compliance training (annual)
+- SAR filing procedures (annual)
+- Customer interview techniques (semi-annual)
+- Cultural sensitivity training (for international transactions)
+- Fraud typology updates (quarterly)
+
+AUDIT AND DOCUMENTATION
+Every high-value transaction review must document:
+- Reviewer name and ID
+- Date and time of review
+- Risk factors identified
+- Customer contact attempts and responses
+- Documentation reviewed
+- Approval/denial reasoning
+- Manager approval for Tier 2/3 transactions
+- Regulatory filings made (CTR, SAR, etc.)
+
+Documentation retained for minimum 5 years per regulatory requirements.

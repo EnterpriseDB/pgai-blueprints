@@ -1,0 +1,1446 @@
+# For demonstration purposes only.
+
+name: bfsi-fraud-detection
+
+services:
+  # ══════════════════════════════════════════
+  # Pre-built images (build once, reuse across services and usecases)
+  # ══════════════════════════════════════════
+
+  # Evaluation runner - used by stack.yaml usecase steps
+  # Run with: docker compose run --rm evaluation-runner <command>
+  evaluation-runner:
+    build:
+      context: .
+      dockerfile: evaluation-runner/Dockerfile
+    image: bfsi-evaluation-runner:latest
+    profiles:
+      - eval
+    volumes:
+      - ./evaluation:/eval
+    working_dir: /eval
+    environment:
+      LANGFLOW_URL: http://langflow:7860
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # NGINX Reverse Proxy - Strips X-Frame-Options for iframe embedding
+  # ══════════════════════════════════════════
+
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: bfsi-nginx-proxy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8890:8890"   # Jupyter (iframe-safe)
+      - "5010:5010"   # MLflow (iframe-safe)
+      - "3010:3010"   # Metabase (iframe-safe)
+      - "7870:7870"   # LangFlow (iframe-safe)
+      - "9011:9011"   # MinIO Console (iframe-safe)
+      - "8130:8130"   # ClickHouse (iframe-safe)
+      - "5700:5700"   # RisingWave Dashboard (iframe-safe)
+      - "8190:8190"   # Lakekeeper (iframe-safe)
+      - "8898:8898"   # Airflow (iframe-safe, upstream optional — 502s until --profile airflow up)
+    depends_on:
+      - jupyter
+      - mlflow
+      - metabase
+      - langflow
+      - minio
+      - clickhouse
+      - risingwave
+      - lakekeeper
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # PATH 1: Bank App → EDB PGD Single-Node (OLTP + PGAA Analytics)
+  # Single node with PGAA for columnar analytics replication to Iceberg
+  # ══════════════════════════════════════════
+
+  pgd:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: pgd/Dockerfile
+      secrets:
+        - edb_token
+      args:
+        PLATFORM: linux/amd64
+    container_name: bfsi-pgd
+    deploy:
+      resources:
+        limits:
+          memory: ${PGD_MEMORY_LIMIT:-4g}
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    environment:
+      POSTGRES_PASSWORD: secret
+      PGDATA: /var/lib/postgresql/db
+      LOCAL_HOST: pgd
+    volumes:
+      - pgd-data:/var/lib/postgresql/db
+      - pgd-analytics:/var/lib/postgresql/pgd-analytics
+      - ./pgd/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
+      - ./db/01-infrastructure.sql:/docker-entrypoint-initdb.d/01-infrastructure.sql
+      - ./db:/db:ro
+      - ./scripts:/scripts:ro
+      - ./tmp:/shared-tmp:rw
+    ports:
+      - "7434:5432"
+      - "5445:5445"
+    networks:
+      - bfsi-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d demo && test -f /var/lib/postgresql/.init_complete"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: bfsi-app
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    profiles:
+      - oltp
+    ports:
+      - "3001:3001"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./app/server.js:/app/server.js:ro
+      - ./app/public:/app/public:ro
+      - ./scripts:/app/scripts:ro
+      - ./db:/app/db:ro
+      - app-node-modules:/app/node_modules
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      DEPLOYMENT_MODE: local
+      POSTGRES_HOST: pgd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: demo
+      CLICKHOUSE_HOST: http://clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: admin123
+      RISINGWAVE_HOST: risingwave
+      RISINGWAVE_PORT: 4566
+      KAFKA_CONNECT_HOST: http://kafka-connect:8083
+      KAFKA_BROKER_FOR_CH: kafka:9092
+      LANGFLOW_HOST: http://langflow:7860
+    depends_on:
+      pgd:
+        condition: service_healthy
+      risingwave:
+        condition: service_healthy
+      kafka-connect:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # PATH 2: PGD → RisingWave (native PG CDC)
+  # ══════════════════════════════════════════
+
+  risingwave:
+    image: risingwavelabs/risingwave:v2.2.2
+    container_name: bfsi-risingwave
+    restart: unless-stopped
+    command: >
+      single-node
+      --store-directory /risingwave/data
+      --prometheus-listener-addr 0.0.0.0:1250
+    ports:
+      - "4574:4566"
+      - "5697:5691"
+    volumes:
+      - risingwave-data:/risingwave
+    environment:
+      RUST_BACKTRACE: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2g
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'cat /dev/null > /dev/tcp/localhost/4566' 2>/dev/null && echo ok || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # PATH 3: PGD → Debezium → Kafka → ClickHouse
+  # ══════════════════════════════════════════
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: bfsi-kafka
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: cb-kafka-cluster-001
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9096:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - bfsi-network
+
+  kafka-connect:
+    image: debezium/connect:2.4
+    container_name: bfsi-kafka-connect
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    ports:
+      - "8084:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:9092
+      GROUP_ID: cb-connect
+      CONFIG_STORAGE_TOPIC: _connect_configs
+      OFFSET_STORAGE_TOPIC: _connect_offsets
+      STATUS_STORAGE_TOPIC: _connect_status
+      CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      STATUS_STORAGE_REPLICATION_FACTOR: 1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 90s
+    networks:
+      - bfsi-network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: bfsi-clickhouse
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: admin123
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8125:8123"
+      - "9002:9000"
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user default --password admin123 --query 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # ML fraud detection — 3 inference paths
+  # Path 1: Kafka → ClickHouse MVs → ML-CH
+  # Path 2: Kafka → RisingWave MVs → ML-RW
+  # Path 3: Kafka → Feature Materializer → ML-Kafka (<100ms)
+  # ══════════════════════════════════════════
+
+  kafka-feature-materializer:
+    build:
+      context: .
+      dockerfile: ml-inference/Dockerfile
+    image: bfsi-ml-inference:latest
+    container_name: bfsi-kafka-feature-materializer
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    profiles:
+      - ml
+    volumes:
+      - ./scripts/runtime/kafka-feature-materializer.py:/app/kafka-feature-materializer.py:ro
+    working_dir: /app
+    command: ["python", "kafka-feature-materializer.py"]
+    environment:
+      KAFKA_BROKER: kafka:9092
+      SOURCE_TOPIC: corebanking.public.transactions
+      TARGET_TOPIC: ml.enriched_transactions
+      WINDOW_SIZE_SECONDS: 300
+      POSTGRES_HOST: pgd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: demo
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - bfsi-network
+
+  ml-inference-kafka:
+    build:
+      context: .
+      dockerfile: ml-inference/Dockerfile
+    image: bfsi-ml-inference:latest
+    container_name: bfsi-ml-kafka
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    profiles:
+      - ml
+    volumes:
+      - ./scripts/runtime/ml-inference-kafka.py:/app/ml-inference-kafka.py:ro
+      - ./models:/models
+    working_dir: /app
+    command: ["python", "ml-inference-kafka.py"]
+    environment:
+      POSTGRES_HOST: pgd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: demo
+      KAFKA_BROKER: kafka:9092
+      SOURCE_TOPIC: ml.enriched_transactions
+      MODEL_PATH: /models/fraud_model_kafka.pkl
+      FRAUD_THRESHOLD: 0.7
+      # MLflow Model Registry configuration
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_MODEL_NAME: fraud-detection-model
+      MLFLOW_MODEL_STAGE: Production
+      # S3/MinIO for artifact access
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - bfsi-network
+
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    container_name: bfsi-jupyter
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    ports:
+      - "8889:8888"
+    environment:
+      JUPYTER_TOKEN: databox
+      JUPYTER_ENABLE_LAB: "yes"
+      GRANT_SUDO: "yes"
+      POSTGRES_HOST: pgd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: demo
+      RISINGWAVE_HOST: risingwave
+      RISINGWAVE_PORT: 4566
+      CLICKHOUSE_HOST: http://clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: admin123
+      # MLflow configuration for experiment tracking and tracing
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_EXPERIMENT_NAME: fraud-detection
+      # MLflow AI Gateway endpoint for LLM access
+      MLFLOW_GATEWAY_URI: http://mlflow:5000/gateway
+      # S3/MinIO credentials for MLflow artifact storage
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      # Anthropic credentials for LLM judge (separate from MinIO)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_DEFAULT_MODEL:  ${ANTHROPIC_DEFAULT_MODEL:-}
+      # Ollama for local LLM inference (host-based)
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # LangFlow for agent evaluation
+      LANGFLOW_URL: http://langflow:7860
+    user: root
+    volumes:
+      - ./notebooks:/home/jovyan/notebooks
+      - ./evaluation:/home/jovyan/evaluation
+      - ./models:/models
+      - ./scripts:/scripts:ro
+    working_dir: /home/jovyan
+    command: start-notebook.sh --NotebookApp.token='databox' --NotebookApp.password=''
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - bfsi-network
+
+  ml-inference-risingwave:
+    build:
+      context: .
+      dockerfile: ml-inference/Dockerfile
+    image: bfsi-ml-inference:latest
+    container_name: bfsi-ml-rw
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    profiles:
+      - ml
+    volumes:
+      - ./scripts/runtime/ml-inference-risingwave.py:/app/ml-inference-risingwave.py:ro
+      - ./models:/models
+    working_dir: /app
+    command: ["python", "ml-inference-risingwave.py"]
+    environment:
+      POSTGRES_HOST: pgd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: demo
+      RISINGWAVE_HOST: risingwave
+      RISINGWAVE_PORT: 4566
+      MODEL_PATH_RW: /models/fraud_model_risingwave.pkl
+      BATCH_SIZE: 100
+      POLL_INTERVAL: 1.0
+      FRAUD_THRESHOLD: 0.7
+      # MLflow Model Registry configuration
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_MODEL_NAME: fraud-detection-model
+      MLFLOW_MODEL_STAGE: Production
+      # S3/MinIO for artifact access
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      risingwave:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    networks:
+      - bfsi-network
+
+  ml-inference-clickhouse:
+    build:
+      context: .
+      dockerfile: ml-inference/Dockerfile
+    image: bfsi-ml-inference:latest
+    container_name: bfsi-ml-ch
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    profiles:
+      - ml
+    volumes:
+      - ./scripts/runtime/ml-inference-clickhouse.py:/app/ml-inference-clickhouse.py:ro
+      - ./models:/models
+    working_dir: /app
+    command: ["python", "ml-inference-clickhouse.py"]
+    environment:
+      POSTGRES_HOST: pgd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: demo
+      CLICKHOUSE_HOST: http://clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: admin123
+      MODEL_PATH_CH: /models/fraud_model_clickhouse.pkl
+      BATCH_SIZE: 100
+      POLL_INTERVAL: 5.0
+      FRAUD_THRESHOLD: 0.7
+      # MLflow Model Registry configuration
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_MODEL_NAME: fraud-detection-model
+      MLFLOW_MODEL_STAGE: Production
+      # S3/MinIO for artifact access
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # PATH 4: PGD → PGAA (WAL sync) → ML-PGAA
+  # Single-database columnar analytics - no external CDC
+  # ══════════════════════════════════════════
+  # PATH 4: PGD → PGAA with CTAS Feature Store
+  # 100% OLTP isolated using pre-computed features
+  # Architecture: CTAS refresh (30s) → Poll Iceberg → Join features → ML inference
+  # ══════════════════════════════════════════
+
+  ml-inference-pgaa:
+    build:
+      context: .
+      dockerfile: ml-inference/Dockerfile
+    image: bfsi-ml-inference:latest
+    container_name: bfsi-ml-pgaa
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    profiles:
+      - ml
+    volumes:
+      - ./scripts/runtime/ml-inference-pgaa-ctas.py:/app/ml-inference-pgaa-ctas.py:ro
+      - ./models:/models
+    working_dir: /app
+    command: ["python", "ml-inference-pgaa-ctas.py"]
+    environment:
+      POSTGRES_HOST: pgd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: demo
+      MODEL_PATH_PGAA: /models/fraud_model_pgaa.pkl
+      BATCH_SIZE: 100
+      CTAS_REFRESH_INTERVAL: 30       # Refresh feature tables every 30 seconds
+      FRAUD_THRESHOLD: 0.7
+      # MLflow Model Registry configuration
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MLFLOW_MODEL_NAME: fraud-detection-model
+      MLFLOW_MODEL_STAGE: Production
+      # S3/MinIO for artifact access
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    depends_on:
+      pgd:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+    networks:
+      - bfsi-network
+
+  fraud-alert:
+    build:
+      context: .
+      dockerfile: ml-inference/Dockerfile
+    image: bfsi-ml-inference:latest
+    container_name: bfsi-fraud-alert
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    profiles:
+      - olap
+    volumes:
+      - ./scripts/runtime/fraud-alert-service.py:/app/fraud-alert-service.py:ro
+    working_dir: /app
+    command: ["python", "fraud-alert-service.py"]
+    environment:
+      POSTGRES_HOST: pgd
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: demo
+      ALERT_POLL_INTERVAL: 10.0
+      ALERT_THRESHOLD: 0.8
+      FRAUD_WEBHOOK_URL: ""
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # AI FRAUD AUDIT: LangFlow Visual Agent Builder
+  # ══════════════════════════════════════════
+
+  # MLflow database init (foundation - needed by MLflow server)
+  mlflow-db-init:
+    image: postgres:17
+    container_name: bfsi-mlflow-db-init
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    depends_on:
+      pgd:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "=== MLflow Database Init ==="
+        PGPASSWORD=secret psql -h pgd -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'mlflow'" | grep -q 1 || \
+          PGPASSWORD=secret psql -h pgd -U postgres -c "CREATE DATABASE mlflow;"
+        PGPASSWORD=secret psql -h pgd -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE mlflow TO postgres;"
+        echo "  - MLFlow database ready"
+    networks:
+      - bfsi-network
+
+  # LangFlow database init (foundation) - database only, no app schemas
+  langflow-db-init:
+    image: postgres:17
+    container_name: bfsi-langflow-db-init
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    depends_on:
+      pgd:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "=== LangFlow Database Init ==="
+
+        # Create LangFlow database (may already exist from 01-infrastructure.sql)
+        PGPASSWORD=secret psql -h pgd -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = 'langflow'" | grep -q 1 || \
+          PGPASSWORD=secret psql -h pgd -U postgres -c "CREATE DATABASE langflow;"
+        PGPASSWORD=secret psql -h pgd -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE langflow TO postgres;"
+        echo "  - LangFlow database ready"
+
+        echo "=== LangFlow Database Init Complete ==="
+    networks:
+      - bfsi-network
+
+  langflow:
+    image: langflowai/langflow:latest
+    container_name: bfsi-langflow
+    user: "0:0"
+    restart: unless-stopped
+    command: ["langflow", "run", "--worker-timeout", "300", "--workers", "1"]
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+        reservations:
+          memory: 1g
+    environment:
+      # LangFlow core configuration
+      - LANGFLOW_DATABASE_URL=postgresql://postgres:secret@pgd:5432/langflow
+      - LANGFLOW_CONFIG_DIR=/var/lib/langflow
+      - LANGFLOW_COMPONENTS_PATH=/custom_components
+      - LANGFLOW_AUTO_LOGIN=true
+      - LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true
+      - LANGFLOW_SUPERUSER=admin
+      # MLflow tracing via Traceloop/OTLP (see: mlflow.org/docs/latest/genai/tracing/integrations/listing/langflow/)
+      # Requires MLflow 3.6+ for OTLP endpoint support
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - TRACELOOP_API_KEY=mlflow-local
+      - TRACELOOP_BASE_URL=http://mlflow:5000
+      - TRACELOOP_HEADERS=x-mlflow-experiment-id=1
+      - LANGFLOW_LANGSMITH_API_KEY=
+      # Anthropic credentials for Claude (same as agent - from host env/.env)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_DEFAULT_MODEL=${ANTHROPIC_DEFAULT_MODEL:-}
+      # MinIO S3 credentials (separate - used for artifact storage)
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin123
+      - MINIO_ENDPOINT=http://minio:9000
+      # Ollama fallback for local models
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=gpt-oss:20b
+      - OPENAI_API_KEY=
+      - LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=ANTHROPIC_API_KEY,ANTHROPIC_DEFAULT_MODEL,OLLAMA_BASE_URL,OLLAMA_MODEL,MLFLOW_TRACKING_URI
+    ports:
+      - "7861:7860"
+    depends_on:
+      pgd:
+        condition: service_healthy
+      langflow-db-init:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+      mlflow:
+        condition: service_healthy
+      mlflow-experiment-init:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - langflow-data:/var/lib/langflow
+      - ./langflow/flows:/flows
+      - ./langflow/custom_components:/custom_components:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:7860/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - bfsi-network
+
+  # PG Airman MCP Server - Database query tool for AI agents
+  pg-airman-mcp:
+    build: ../../plugins/pg-airman-mcp
+    container_name: bfsi-pg-airman-mcp
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8201:8200"
+    environment:
+      DATABASE_URI: postgresql://postgres:secret@pgd:5432/demo
+      ACCESS_MODE: restricted
+      ALLOW_COMMENT_IN_RESTRICTED: "true"
+    command: ["pg-airman-mcp", "--access-mode=restricted", "--transport=sse", "--sse-port=8200"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      pgd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -an | grep 8200 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bfsi-network
+
+  # LangFlow init: MCP server configuration (foundation)
+  # Links LangFlow to pg-airman-mcp for database queries
+  langflow-init:
+    build:
+      context: .
+      dockerfile: ml-inference/Dockerfile
+    image: bfsi-ml-inference:latest
+    container_name: bfsi-langflow-init
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    depends_on:
+      langflow:
+        condition: service_healthy
+      pg-airman-mcp:
+        condition: service_healthy
+    restart: "no"
+    volumes:
+      - langflow-data:/var/lib/langflow
+      - ./scripts/config/configure-langflow-mcp.py:/app/configure-langflow-mcp.py:ro
+    environment:
+      LANGFLOW_DATA_DIR: /var/lib/langflow
+    working_dir: /app
+    command: ["python", "configure-langflow-mcp.py"]
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # MLFlow AI Gateway + Experiment Tracking
+  # Unified interface for Claude/Anthropic and Ollama (host) LLMs
+  # ══════════════════════════════════════════
+
+  # MLFlow - AI Gateway + Experiment Tracking (uses PGD for backend, MinIO for artifacts)
+  mlflow:
+    build:
+      context: ./mlflow
+      dockerfile: Dockerfile
+    container_name: bfsi-mlflow
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    ports:
+      - "5001:5000"
+    environment:
+      # MLflow backend configuration
+      MLFLOW_BACKEND_STORE_URI: postgresql://postgres:secret@pgd:5432/mlflow
+      MLFLOW_ARTIFACTS_DESTINATION: s3://mlflow-artifacts
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      # MinIO credentials (for artifact storage)
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      # Ollama configuration (for local models via AI Gateway)
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      # Anthropic API (direct, optional)
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - mlflow-data:/mlflow
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://postgres:secret@pgd:5432/mlflow
+      --default-artifact-root s3://mlflow-artifacts
+      --serve-artifacts
+      --allowed-hosts '*'
+    depends_on:
+      mlflow-db-init:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - bfsi-network
+
+  # MLflow experiment init - creates langflow-agents experiment for tracing
+  mlflow-experiment-init:
+    image: curlimages/curl:latest
+    container_name: bfsi-mlflow-experiment-init
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "=== Creating MLflow Experiments ==="
+        # Create langflow-agents experiment
+        curl -s -X POST "http://mlflow:5000/api/2.0/mlflow/experiments/create" \
+          -H "Content-Type: application/json" \
+          -d '{"name": "langflow-agents"}' 2>/dev/null || true
+        # Get the experiment ID
+        EXP_ID=$(curl -s "http://mlflow:5000/api/2.0/mlflow/experiments/get-by-name?experiment_name=langflow-agents" | grep -o '"experiment_id":"[^"]*"' | cut -d'"' -f4)
+        echo "  - langflow-agents experiment ready (ID: $EXP_ID)"
+        echo "  - View traces at: http://localhost:5001/#/experiments/$EXP_ID/traces"
+    networks:
+      - bfsi-network
+
+  # Note: MLflow 3.0 AI Gateway is configured via UI at http://localhost:5001
+  # Go to Settings -> AI Gateway to add API keys and create endpoints
+
+  # MLflow Model Serving - REST API for fraud detection model
+  # Serves registered model via REST endpoint for all inference services
+  mlflow-model-server:
+    build:
+      context: ./mlflow
+      dockerfile: Dockerfile
+    container_name: bfsi-mlflow-model-server
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    ports:
+      - "5002:5002"
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+    command: >
+      sh -c "
+        echo 'Waiting for MLflow server and registered model...' &&
+        sleep 30 &&
+        mlflow models serve
+          --model-uri 'models:/fraud-detection-model/Production'
+          --host 0.0.0.0
+          --port 5002
+          --no-conda
+      "
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # PGAA Infrastructure: MinIO + Iceberg REST Catalog
+  # ══════════════════════════════════════════
+
+  minio:
+    image: minio/minio:latest
+    container_name: bfsi-minio
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    ports:
+      - "9003:9000"
+      - "9004:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - bfsi-network
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: bfsi-minio-init
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set cbminio http://minio:9000 minioadmin minioadmin123;
+        mc mb --ignore-existing cbminio/pgaa-warehouse;
+        mc mb --ignore-existing cbminio/pgaa-data;
+        mc mb --ignore-existing cbminio/mlflow-artifacts;
+        mc anonymous set download cbminio/pgaa-warehouse;
+        echo 'MinIO buckets created for PGAA and MLFlow';
+      "
+    networks:
+      - bfsi-network
+
+  # Fraud rules bucket + document upload (OLTP profile)
+  minio-fraud-init:
+    image: minio/mc:latest
+    container_name: bfsi-minio-fraud-init
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    profiles:
+      - oltp
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./docs:/docs:ro
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set cbminio http://minio:9000 minioadmin minioadmin123;
+        mc mb --ignore-existing cbminio/fraud-rules;
+        mc anonymous set download cbminio/fraud-rules;
+        echo 'Uploading fraud rules documents...';
+        mc cp /docs/*.txt cbminio/fraud-rules/ 2>/dev/null || echo 'No docs to upload';
+        echo 'MinIO fraud-rules bucket created and docs uploaded';
+      "
+    networks:
+      - bfsi-network
+
+  # ══════════════════════════════════════════
+  # Metabase - Analytics Dashboards
+  # ══════════════════════════════════════════
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: bfsi-metabase
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
+    ports:
+      - "3002:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: pgd
+      MB_DB_PORT: 5432
+      MB_DB_DBNAME: metabase
+      MB_DB_USER: postgres
+      MB_DB_PASS: secret
+      JAVA_TIMEZONE: UTC
+      MB_PLUGINS_DIR: /plugins
+      MB_DB_QUERY_TIMEOUT_MINUTES: 5
+    volumes:
+      - metabase-plugins:/plugins
+    depends_on:
+      pgd:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 90s
+    networks:
+      - bfsi-network
+
+  metabase-setup:
+    build:
+      context: .
+      dockerfile: ml-inference/Dockerfile
+    image: bfsi-ml-inference:latest
+    container_name: bfsi-metabase-setup
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    profiles:
+      - setup
+    restart: "no"
+    command: ["python", "/app/setup_metabase.py"]
+    volumes:
+      - ./scripts/setup/olap/setup_metabase.py:/app/setup_metabase.py:ro
+      - ./scripts/setup/olap/setup-hybrid-search.sql:/app/setup-hybrid-search.sql:ro
+    environment:
+      METABASE_URL: http://metabase:3000
+      PGD_HOST: pgd
+      PGD_PORT: "5432"
+      PGD_USER: postgres
+      PGD_PASSWORD: secret
+      PGD_DATABASE: demo
+      CH_HOST: clickhouse
+      CH_PORT: "8123"
+      CH_USER: default
+      CH_PASSWORD: admin123
+      RW_HOST: risingwave
+      RW_PORT: "4566"
+      RW_USER: root
+      RW_PASSWORD: ""
+      RW_DATABASE: dev
+      HYBRID_BM25_CORPUS: ${HYBRID_BM25_CORPUS:-2000}
+      HYBRID_BM25_BATCH:  ${HYBRID_BM25_BATCH:-200}
+    depends_on:
+      metabase:
+        condition: service_healthy
+      pgd:
+        condition: service_healthy
+    networks:
+      - bfsi-network
+
+  # AIDB Semantic Search Setup - Creates PGFS + Volume + ChunkText + BERT embeddings (OLTP profile)
+  aidb-init:
+    image: postgres:17
+    container_name: bfsi-aidb-init
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    profiles:
+      - oltp
+    depends_on:
+      pgd:
+        condition: service_healthy
+      minio-fraud-init:
+        condition: service_completed_successfully
+    restart: "no"
+    volumes:
+      - ./scripts/setup/oltp/setup-minio-aidb.sql:/tmp/setup-minio-aidb.sql:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "=== AIDB Semantic Search Setup ==="
+        echo "Waiting 10s for MinIO documents to be fully uploaded..."
+        sleep 10
+
+        # Run AIDB setup (idempotent - drops and recreates)
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -f /tmp/setup-minio-aidb.sql 2>&1 || {
+          echo "AIDB setup failed - AIDB extension may not be available"
+          echo "Semantic search will not be available, text search fallback will be used"
+        }
+
+        echo "=== AIDB Init Complete ==="
+    networks:
+      - bfsi-network
+
+  # OLTP Schema + Synthetic Seed (pure-SQL, replaces synthdb on NF)
+  # Applies db/oltp.sql (table defs) then db/seed-oltp.sql (10K transactions,
+  # 500 customers, fraud labels). Idempotent: re-runs are no-ops if data
+  # already present. On laptop the equivalent work is done by
+  # scripts/setup/oltp/start-service.sh; on NF this Job replaces it.
+  oltp-seed:
+    image: postgres:17
+    container_name: bfsi-oltp-seed
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    profiles:
+      - oltp
+    depends_on:
+      pgd:
+        condition: service_healthy
+    restart: "no"
+    volumes:
+      - ./db/oltp.sql:/tmp/oltp.sql:ro
+      - ./db/seed-oltp.sql:/tmp/seed-oltp.sql:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "=== OLTP Schema + Seed ==="
+        # Cross-infra behavior: this job exists in compose so the same stack
+        # works on laptop and NF. But on laptop, the existing OLTP pipeline
+        # (scripts/setup/oltp/start-service.sh) generates 250K rows via SDV
+        # synthdb — running this seed there too would double-load. Gate on
+        # DEPLOY_TARGET which the NF agent injects automatically; laptop
+        # deploys leave it unset, so we skip and rely on synthdb instead.
+        if [ "${DEPLOY_TARGET:-}" != "northflank" ]; then
+          echo "DEPLOY_TARGET='${DEPLOY_TARGET:-unset}' — laptop uses synthdb for OLTP data. Skipping SQL seed."
+          exit 0
+        fi
+        # Wait for pgd to accept connections (foundation init may still be running)
+        for i in $(seq 1 30); do
+          if PGPASSWORD=secret psql -h pgd -U postgres -d demo -c '\q' 2>/dev/null; then
+            echo "pgd reachable"
+            break
+          fi
+          echo "  pgd not ready yet ($i/30) — sleeping 2s"
+          sleep 2
+        done
+        echo "--- applying schema (oltp.sql) ---"
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -v ON_ERROR_STOP=1 -q -f /tmp/oltp.sql
+        echo "--- applying seed (seed-oltp.sql) ---"
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -v ON_ERROR_STOP=1 -q -f /tmp/seed-oltp.sql
+        echo "=== OLTP Seed Complete ==="
+    networks:
+      - bfsi-network
+
+  # Lakekeeper - Iceberg REST Catalog (uses pgd for metadata, MinIO for storage)
+  lakekeeper-migrate:
+    image: quay.io/lakekeeper/catalog:latest
+    container_name: bfsi-lakekeeper-migrate
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    environment:
+      LAKEKEEPER__PG_ENCRYPTION_KEY: PgaaEncryptionKey123
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:lakekeeper@pgd:5432/lakekeeper
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:lakekeeper@pgd:5432/lakekeeper
+      RUST_LOG: info
+    restart: "no"
+    command: ["migrate"]
+    depends_on:
+      pgd:
+        condition: service_healthy
+    networks:
+      - bfsi-network
+
+  lakekeeper:
+    image: quay.io/lakekeeper/catalog:latest
+    container_name: bfsi-lakekeeper
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    environment:
+      LAKEKEEPER__PG_ENCRYPTION_KEY: PgaaEncryptionKey123
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:lakekeeper@pgd:5432/lakekeeper
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:lakekeeper@pgd:5432/lakekeeper
+      RUST_LOG: info,lakekeeper=debug
+    command: ["serve"]
+    ports:
+      - "8181:8181"
+    healthcheck:
+      test: ["CMD", "/home/nonroot/lakekeeper", "healthcheck"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+    depends_on:
+      lakekeeper-migrate:
+        condition: service_completed_successfully
+      pgd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - bfsi-network
+
+  # Combined Lakekeeper + PGAA initialization
+  lakekeeper-init:
+    build:
+      context: .
+      dockerfile: init-tools/Dockerfile
+    image: bfsi-init-tools:latest
+    container_name: bfsi-lakekeeper-init
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    depends_on:
+      pgd:
+        condition: service_healthy
+      lakekeeper:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: "no"
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "=== Lakekeeper Bootstrap ==="
+        curl -s -X POST http://lakekeeper:8181/management/v1/bootstrap \
+          -H "Content-Type: application/json" \
+          --data '{"accept-terms-of-use": true}'
+        echo ""
+
+        echo "=== Creating Warehouse ==="
+        curl -s -X POST http://lakekeeper:8181/management/v1/warehouse \
+          -H "Content-Type: application/json" \
+          --data @/tmp/create-warehouse.json
+        echo ""
+
+        sleep 5
+
+        echo "=== Getting Warehouse UUID ==="
+        WAREHOUSE_UUID=$$(curl -s 'http://lakekeeper:8181/catalog/v1/config?warehouse=pgaa' | grep -o '"prefix":"[^"]*"' | cut -d'"' -f4)
+        echo "Warehouse UUID: $$WAREHOUSE_UUID"
+
+        if [ -z "$$WAREHOUSE_UUID" ]; then
+          echo "ERROR: Could not get warehouse UUID"
+          exit 1
+        fi
+
+        echo "=== Registering Lakekeeper catalog with PGAA ==="
+        CATALOG_JSON="{\"url\": \"http://lakekeeper:8181/catalog\", \"warehouse\": \"$$WAREHOUSE_UUID\"}"
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -c "SELECT pgaa.add_catalog('lakekeeper', 'iceberg-rest'::pgaa.catalog_type, '$$CATALOG_JSON'::json);" || echo "Catalog add failed (may already exist)"
+
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -c "SELECT pgaa.attach_catalog('lakekeeper');" || echo "Catalog attach failed (may already be attached)"
+
+        echo "=== PGAA Catalogs ==="
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -c "
+          SELECT name, type, status FROM pgaa.list_catalogs();
+        "
+
+        echo "=== Configuring analytics replication ==="
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -c "
+          SELECT bdr.alter_node_group_option('pgd-group', 'analytics_write_catalog', 'lakekeeper');
+        " 2>/dev/null || echo "Node group option may already be set"
+
+        echo "=== Waiting for transactions table ==="
+        for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+          PGPASSWORD=secret psql -h pgd -U postgres -d demo -c "SELECT 1 FROM transactions LIMIT 1" >/dev/null 2>&1 && break
+          echo "Waiting... (attempt $$i)"
+          sleep 10
+        done
+
+        echo "=== Enabling analytics replication on transactions ==="
+        # PGAA creates unpartitioned Iceberg table and syncs via WAL
+        # CTAS feature tables handle aggregations (no partitioning needed)
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -c "
+          CALL pgaa.enable_analytics_replication('transactions');
+        " 2>/dev/null || echo "Analytics replication may already be enabled"
+
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -c "
+          SELECT pgaa.launch_task('transactions'::regclass, 'initial_offload');
+        " 2>/dev/null || echo "Initial offload may already be scheduled"
+
+        echo "=== PGAA Analytics Status ==="
+        PGPASSWORD=secret psql -h pgd -U postgres -d demo -c "
+          SELECT table_name, replication_status, catalog_name FROM pgaa.list_analytics_tables();
+        "
+
+        echo "=== Lakekeeper + PGAA init complete! ==="
+    volumes:
+      - ./lakekeeper/create-warehouse.json:/tmp/create-warehouse.json:ro
+    networks:
+      - bfsi-network
+
+  airflow-postgres:
+    image: postgres:17
+    container_name: bfsi-airflow-postgres
+    restart: unless-stopped
+    profiles: [airflow]
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - bfsi-network
+
+  airflow-init:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    image: bfsi-airflow:latest
+    container_name: bfsi-airflow-init
+    profiles: [airflow]
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__WEBSERVER__SECRET_KEY: "bfsi-demo-airflow-secret-not-for-prod"
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+      _AIRFLOW_WWW_USER_FIRSTNAME: BFSI
+      _AIRFLOW_WWW_USER_LASTNAME: Admin
+      _AIRFLOW_WWW_USER_ROLE: Admin
+      _AIRFLOW_WWW_USER_EMAIL: admin@bfsi.local
+    entrypoint: /bin/bash
+    command: -c "airflow db migrate && airflow users create --username admin --password admin --firstname BFSI --lastname Admin --role Admin --email admin@bfsi.local || true"
+    networks:
+      - bfsi-network
+
+  airflow-scheduler:
+    image: bfsi-airflow:latest
+    container_name: bfsi-airflow-scheduler
+    restart: unless-stopped
+    profiles: [airflow]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: "30"
+      AIRFLOW__WEBSERVER__SECRET_KEY: "bfsi-demo-airflow-secret-not-for-prod"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags:ro
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$(hostname)\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - bfsi-network
+
+  airflow-webserver:
+    image: bfsi-airflow:latest
+    container_name: bfsi-airflow-webserver
+    restart: unless-stopped
+    profiles: [airflow]
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
+      AIRFLOW__WEBSERVER__BASE_URL: "http://127.0.0.1:8888"
+      AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX: "True"
+      AIRFLOW__WEBSERVER__PROXY_FIX_X_FOR: "1"
+      AIRFLOW__WEBSERVER__PROXY_FIX_X_PROTO: "1"
+      AIRFLOW__WEBSERVER__PROXY_FIX_X_HOST: "1"
+      AIRFLOW__WEBSERVER__PROXY_FIX_X_PORT: "1"
+      AIRFLOW__WEBSERVER__PROXY_FIX_X_PREFIX: "1"
+      AIRFLOW__WEBSERVER__SECRET_KEY: "bfsi-demo-airflow-secret-not-for-prod"
+      AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags:ro
+      - ./airflow/webserver_config.py:/opt/airflow/webserver_config.py:ro
+    ports:
+      - "8888:8080"
+    command: webserver
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - bfsi-network
+
+secrets:
+  edb_token:
+    environment: EDB_SUBSCRIPTION_TOKEN
+
+volumes:
+  pgd-data: {}
+  pgd-analytics: {}
+  clickhouse-data: {}
+  risingwave-data: {}
+  minio-data: {}
+  langflow-data: {}
+  mlflow-data: {}
+  metabase-plugins: {}
+  app-node-modules: {}
+  airflow-postgres-data: {}
+
+networks:
+  bfsi-network:
+    driver: bridge
+    name: bfsi-network

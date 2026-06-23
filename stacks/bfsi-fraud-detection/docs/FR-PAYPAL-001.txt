@@ -1,0 +1,485 @@
+Fraud Detection Rule: FR-PAYPAL-001
+Rule Name: France PayPal Compliance
+Region: France (FR)
+Payment Vendor: PayPal
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors PayPal transactions in France with focus on Bon Coin (leboncoin.fr) marketplace fraud, strict French consumer protection laws (Code de la consommation), cross-border EU transactions, and fraud patterns specific to the French market including sophisticated phishing and social engineering.
+
+RULE PARAMETERS
+- Threshold Amount: €3,500 EUR (approximately $3,800 USD)
+- Risk Score Threshold: 0.75
+- Action: Alert (flag for review with consumer protection verification)
+- Category: Marketplace Fraud and Consumer Protection
+- Regulatory Framework: ACPR (Autorité de Contrôle Prudentiel et de Résolution), Code de la consommation
+
+RULE DESCRIPTION
+French consumers benefit from strong consumer protection under the Code de la consommation, including 14-day cooling-off periods (droit de rétractation), extensive warranty rights, and strict merchant obligations. France also has very active online marketplaces (especially Leboncoin) creating unique fraud patterns. This rule addresses French-specific risks while ensuring regulatory compliance.
+
+FRENCH-SPECIFIC CONSIDERATIONS
+
+REGULATORY ENVIRONMENT:
+- ACPR (banking and insurance regulator)
+- DGCCRF (consumer protection authority)
+- Code de la consommation (Consumer Code)
+- Droit de rétractation (14-day withdrawal right for distance sales)
+- Garantie légale de conformité (2-year legal warranty)
+- Strong anti-fraud measures (Pharos platform)
+
+MARKETPLACE LANDSCAPE:
+- Leboncoin.fr (dominant classified ads platform)
+- Vinted (second-hand clothing)
+- eBay.fr
+- Facebook Marketplace
+- Marketplace fraud extremely common
+
+PAYMENT CULTURE:
+- Bank transfers (virement bancaire) very common
+- Chèques (checks) still used (less common elsewhere)
+- Carte Bancaire (CB) - French bank card system
+- PayPal for online purchases and marketplaces
+- Cash (espèces) for in-person marketplace transactions
+
+LANGUAGE:
+- French language required for consumer contracts
+- Formal communication style
+- Technical/legal precision important
+- Strong enforcement of French language requirements
+
+TRIGGERING CONDITIONS
+
+This rule triggers when:
+1. PayPal transaction from French account ≥ €3,500
+2. Marketplace transaction with elevated risk indicators
+3. Fraud risk score ≥ 0.75
+4. Pattern matching known French scam types
+
+OR special conditions:
+5. Leboncoin transaction over €1,000
+6. "Amis et famille" (Friends and Family) for commercial transaction
+7. Cross-border transaction with red flags
+8. Vehicle purchase (high fraud category in France)
+9. Rental deposit (especially Paris market)
+
+RISK SCORE CALCULATION
+
+BASE FRENCH PAYPAL RISK: 0.25
+Higher baseline due to prevalent marketplace fraud
+
+MARKETPLACE INDICATORS (+0.00 to +0.35):
+- Leboncoin transaction: +0.15
+- Amis et famille for goods purchase: +0.35
+- Vehicle or high-value item: +0.25
+- Seller no reviews/history: +0.20
+- Price too good to be true: +0.25
+- Seller pressures for quick payment: +0.20
+
+TRANSACTION CHARACTERISTICS (+0.00 to +0.30):
+- Amount significantly above norm: +0.20
+- Cross-border to non-EU country: +0.30
+- Rental deposit (especially Paris): +0.25
+- Gift card or cash equivalent: +0.30
+- Digital goods: +0.15
+
+CUSTOMER BEHAVIOR (+0.00 to +0.30):
+- New PayPal account: +0.20
+- Recent account changes: +0.15
+- Multiple failed payments: +0.20
+- Unusual hour for French behavior: +0.10
+- VPN from outside France: +0.20
+
+COMMUNICATION RED FLAGS (+0.00 to +0.20):
+- Urgency in seller messages: +0.20
+- Refuses "Biens et services" (Goods and Services): +0.25
+- Poor French language (if claiming to be French): +0.15
+- Romance or emergency element: +0.20
+
+Example Score:
+- Base risk: 0.25
+- Leboncoin vehicle purchase: +0.25
+- Amis et famille requested: +0.35
+- Price below market: +0.25
+- Seller no history: +0.20
+- Urgency: +0.20
+- Total: 1.50 → BLOCK IMMEDIATELY
+
+FRAUD SCENARIOS SPECIFIC TO FRANCE
+
+SCENARIO 1: ARNAQUE LEBONCOIN (LEBONCOIN SCAM)
+Description: Fake seller scam on France's most popular classified ads platform.
+
+Pattern:
+- Attractive listing (vehicle, smartphone, apartment rental)
+- Price below market value
+- Seller claims urgency ("moving abroad", "need quick sale")
+- Requests PayPal Amis et famille
+- May send fake delivery tracking
+- Item doesn't exist
+
+Example:
+- Listing: Renault Clio 2019, €8,500 (market value €12,000)
+- Platform: Leboncoin
+- Seller: "Déménage en Suisse, vente rapide nécessaire"
+- Payment request: PayPal Amis et famille "pour éviter les frais"
+- Red flags: Too cheap, urgency, no buyer protection
+- Risk Score: 0.95
+- Action: BLOCK, educate about Leboncoin fraud, recommend in-person cash only
+
+SCENARIO 2: FAUSSE ANNONCE IMMOBILIÈRE (FAKE RENTAL LISTING)
+Description: Fake apartment rental targeting people seeking housing in tight markets.
+
+Paris Specificity:
+- Extremely tight rental market in Paris
+- Desperation creates vulnerability
+- High deposits required (2-3 months rent)
+- Common target for fraud
+
+Pattern:
+- Attractive Paris apartment at reasonable price
+- "Owner" abroad, can't show apartment
+- Requires deposit before viewing
+- PayPal Amis et famille or bank transfer
+- Apartment doesn't exist or isn't actually for rent
+
+Example:
+- Listing: 2-bedroom Marais apartment, €1,400/month
+- Owner: "I'm in London, can't show personally"
+- Deposit: €4,200 (3 months) via PayPal
+- Red flags: Can't view, payment before seeing, urgency
+- Risk Score: 0.92
+- Action: BLOCK, warn about rental scams, recommend never paying before viewing
+
+SCENARIO 3: ARNAQUE AU FAUX CONSEILLER (FAKE ADVISOR SCAM)
+Description: Scammer impersonates bank advisor or official to request payment.
+
+French Variation:
+- Claims to be from customer's bank (Crédit Agricole, BNP Paribas, Société Générale)
+- Or claims to be from "police fiscale" (tax police)
+- Sophisticated French language
+- Urgency and official tone
+- Requests PayPal or bank transfer
+
+Example:
+- Call: "Bonjour, je suis conseiller à Crédit Agricole"
+- Claim: "Suspicious activity on your account"
+- Request: "Send €2,500 via PayPal to secure account"
+- Red flags: Banks don't request PayPal payments, pressure tactics
+- Risk Score: 0.94
+- Action: BLOCK, educate about bank impersonation, report to Pharos (government anti-fraud platform)
+
+SCENARIO 4: ARNAQUE À LA LIVRAISON (DELIVERY SCAM)
+Description: Fake delivery notification leading to payment request.
+
+Pattern:
+- SMS or email claiming package awaiting delivery
+- From fake "Colissimo" (La Poste), "Chronopost", or "DPD"
+- Claims small customs fee or redelivery fee
+- Links to fake payment page
+- Steals payment info or charges large amount
+
+Example:
+- SMS: "Votre colis Colissimo attend. Frais de douane €2.50"
+- Link: Fake La Poste website
+- Requests: Full credit card or PayPal login
+- Then: Large fraudulent charge (€500-€5,000)
+- Risk Score: Account takeover + fraud
+- Action: If fraud detected, BLOCK, notify customer, educate about delivery phishing
+
+SCENARIO 5: ARNAQUE SENTIMENTALE (ROMANCE SCAM)
+Description: Online romance leading to payment requests.
+
+French Context:
+- Targets lonely individuals on dating sites (Meetic, Tinder, etc.)
+- "Partner" claims to be French person abroad
+- Eventually needs emergency funds
+- Exploits French romanticism and trust
+
+Example:
+- Customer: 65-year-old widow in Lyon
+- Story: Met "French businessman" online
+- Location: Claims working in Côte d'Ivoire
+- Emergency: Needs €6,000 for medical emergency
+- Red flags: Never met, emergency funds, foreign location
+- Risk Score: 0.96
+- Action: BLOCK, educate about romance scams, provide support resources, report to police
+
+SCENARIO 6: FAUX SITE MARCHAND (FAKE E-COMMERCE SITE)
+Description: Professional-looking fake French e-commerce site.
+
+Pattern:
+- Well-designed website in French
+- Sells popular items at attractive prices
+- Takes PayPal or credit card payment
+- Never delivers or delivers counterfeit
+- Site disappears after collecting payments
+
+Example:
+- Website: "electromenager-discount.fr"
+- Products: Appliances at 30% discount
+- Transaction: €2,200 for washing machine
+- Red flags: Recently registered domain, no reviews, no physical address, prices too good
+- Customer never receives item
+- Risk Score: 0.87
+- Action: HOLD transaction, verify merchant legitimacy, check domain age, verify physical address
+
+SCENARIO 7: ARNAQUE AU TROP-PERÇU (OVERPAYMENT SCAM)
+Description: Buyer "overpays" and requests refund via different method.
+
+French Leboncoin Variation:
+- Targets Leboncoin sellers
+- Fake PayPal payment email
+- Claims overpayment occurred
+- Requests refund via bank transfer or cash
+- Original payment never actually occurred
+
+Example:
+- Seller: Listing iPhone on Leboncoin for €800
+- Buyer: Sends screenshot showing €1,200 payment
+- Request: "Erreur, remboursez €400 par virement bancaire"
+- Reality: No actual PayPal payment received
+- Risk Score: 0.96
+- Action: BLOCK any "refund", alert seller, educate about overpayment scams
+
+SCENARIO 8: CRYPTO ARNAQUE (CRYPTOCURRENCY SCAM)
+Description: Fake crypto investment or P2P crypto fraud.
+
+Pattern:
+- Customer wants to buy cryptocurrency
+- Finds seller on Leboncoin, Facebook groups, or Telegram
+- Agrees on amount (e.g., €5,000 for Bitcoin)
+- Sends PayPal Amis et famille
+- Never receives crypto
+- Can't reverse payment
+
+Example:
+- Customer: Paris resident wants Bitcoin
+- Platform: Leboncoin "cryptocurrency" section
+- Amount: €7,500 for 0.15 BTC
+- Payment: Amis et famille as requested
+- Reality: Scammer disappears, no Bitcoin
+- Risk Score: 0.90
+- Action: BLOCK Amis et famille for crypto, educate, recommend licensed platforms only (Coinhouse, etc.)
+
+FRENCH CONSUMER PROTECTION LAWS
+
+DROIT DE RÉTRACTATION (RIGHT OF WITHDRAWAL):
+14-day cooling-off period for distance sales:
+- Customer can cancel without reason
+- Full refund required within 14 days
+- Customer returns goods at own expense (unless agreed otherwise)
+- Exceptions: Perishable goods, personalized items, sealed media (if opened), accommodation
+
+Merchant MUST:
+- Inform customer of withdrawal right clearly
+- Provide standard withdrawal form
+- Process refund within 14 days of notification
+
+GARANTIE LÉGALE DE CONFORMITÉ:
+2-year legal warranty for goods:
+- Product must conform to description
+- Must be fit for purpose
+- Defects within 24 months presumed to exist at purchase
+- Buyer can request repair, replacement, or refund
+- Stronger than many other countries
+
+MENTIONS LÉGALES (LEGAL INFORMATION):
+French law requires merchants to display:
+- Company name and legal form
+- Registered office address
+- Company registration number (SIRET)
+- VAT number if applicable
+- Contact details
+- Similar to German Impressum but specific French requirements
+
+This rule verifies merchant compliance.
+
+PRICE TRANSPARENCY:
+- Total price including all taxes must be shown
+- Delivery costs must be clear before order
+- No hidden costs allowed
+- Currency must be clear (EUR)
+
+STRONG CUSTOMER AUTHENTICATION (SCA)
+
+PSD2 IN FRANCE:
+- SCA widely implemented
+- 3D Secure 2.0 (3DS2) standard
+- Many French banks use SMS OTP or mobile app
+- Transactions >€30 typically require SCA
+
+EXEMPTIONS:
+- Low-risk transactions (fraud history dependent)
+- Recurring payments after first SCA
+- Trusted beneficiaries
+- Low-value (<€30)
+
+This rule monitors for SCA bypass attempts.
+
+CROSS-BORDER EU TRANSACTIONS
+
+FRENCH CROSS-BORDER COMMERCE:
+- Significant trade with Germany, Belgium, Spain, Italy
+- SEPA payments standard
+- Language requirements (French descriptions for French customers)
+- VAT rules for intra-EU sales
+- Consumer protection extends to EU sellers targeting France
+
+RISK FACTORS:
+- First cross-border purchase over €2,000
+- Non-EU merchants
+- Merchants in high-fraud EU countries
+- No French language terms/policies
+
+AUTOMATED RESPONSE ACTIONS
+
+WHEN SCORE 0.75-0.85 (Medium-High Risk):
+1. Display strong warning in French
+2. Offer to switch to "Biens et services" (Goods and Services)
+3. Provide Leboncoin safety guidance
+4. Require acknowledgment of risks
+5. Proceed if customer confirms after warnings
+
+WHEN SCORE 0.85-0.95 (High Risk):
+1. HOLD transaction for manual review
+2. Contact customer via verified phone
+3. Ask targeted questions (in French)
+4. Verify not responding to Leboncoin scam
+5. Check seller legitimacy if marketplace transaction
+6. Block if scam indicators clear
+
+WHEN SCORE > 0.95 (Critical Risk):
+1. BLOCK transaction immediately
+2. Contact customer with fraud alert (French)
+3. Provide specific scam education
+4. Report to Pharos (government platform) if appropriate
+5. Consider account review
+6. Offer victim support resources
+
+CUSTOMER COMMUNICATION (FRENCH)
+
+LEBONCOIN WARNING:
+"⚠️ ATTENTION - RISQUE D'ARNAQUE LEBONCOIN
+
+Cette transaction présente des caractéristiques d'une arnaque courante sur Leboncoin:
+• Paiement en "Amis et famille" demandé (AUCUNE protection)
+• Prix inférieur au marché
+• Vendeur presse pour un paiement rapide
+• Impossible de voir l'objet en personne
+
+CONSEILS DE SÉCURITÉ:
+✓ Privilégiez les rencontres en main propre avec paiement en espèces
+✓ Si vous utilisez PayPal, choisissez TOUJOURS "Biens et services"
+✓ Méfiez-vous des prix trop attractifs
+✓ Ne payez JAMAIS avant d'avoir vu/reçu l'objet
+✓ Vérifiez l'identité du vendeur
+
+En cas de doute, signalez sur: signal-arnaques.com ou Pharos (interieur.gouv.fr)
+
+Voulez-vous continuer? [OUI / NON]"
+
+RENTAL SCAM WARNING:
+"⚠️ ATTENTION - ARNAQUE À LA LOCATION IMMOBILIÈRE
+
+Les escroqueries aux fausses annonces immobilières sont très fréquentes, particulièrement à Paris.
+
+SIGNES D'ARNAQUE:
+✗ Propriétaire ne peut pas montrer le logement
+✗ Demande de caution avant visite
+✗ Prix anormalement bas pour le quartier
+✗ Propriétaire prétend être à l'étranger
+✗ Urgence pour payer rapidement
+
+RECOMMANDATIONS:
+✓ Ne JAMAIS payer avant d'avoir visité
+✓ Vérifier l'identité du propriétaire
+✓ Demander à voir le titre de propriété
+✓ Faire établir un bail en bonne forme
+✓ Privilégier les agences immobilières établies
+
+Pour signaler: signal-arnaques.com"
+
+INTEGRATION WITH FRENCH AUTHORITIES
+
+PHAROS (PLATEFORME D'HARMONISATION, D'ANALYSE, DE RECOUPEMENT ET D'ORIENTATION DES SIGNALEMENTS):
+- Government platform for reporting internet fraud
+- Managed by Ministry of Interior
+- Victims can report scams online
+- Intelligence sharing with police
+
+DGCCRF (DIRECTION GÉNÉRALE DE LA CONCURRENCE, DE LA CONSOMMATION ET DE LA RÉPRESSION DES FRAUDES):
+- Consumer protection authority
+- Investigates merchant fraud
+- Enforces Code de la consommation
+- Can fine or prosecute non-compliant merchants
+
+GENDARMERIE NATIONALE / POLICE NATIONALE:
+- Cybercrime units (C3N for gendarmerie, BEFTI for police)
+- Investigate fraud cases
+- Coordinate with Europol for cross-border fraud
+
+ACPR (AUTORITÉ DE CONTRÔLE PRUDENTIEL ET DE RÉSOLUTION):
+- Banking and payment services regulator
+- Oversees PayPal operations in France
+- Consumer complaints handling
+
+INFO ESCROQUERIES:
+- Government hotline: 0 805 805 817
+- Free information about scams
+- Victim support
+
+EXAMPLES
+
+Example 1 - Legitimate Purchase (APPROVE):
+- Customer: Lyon, established PayPal user
+- Transaction: €2,100 for designer handbag from reputable boutique
+- Payment: Biens et services (buyer protection)
+- Merchant: Verified French retailer with proper mentions légales
+- Risk Score: 0.42
+- Action: APPROVE with droit de rétractation reminder
+
+Example 2 - Leboncoin Vehicle Scam (BLOCK):
+- Customer: Marseille
+- Transaction: €18,000 for car on Leboncoin
+- Red flags: Amis et famille, can't see car, seller "in Belgium", price 30% below market
+- Risk Score: 0.98
+- Action: BLOCK immediately, provide Leboncoin fraud education, recommend in-person cash only for vehicles
+
+Example 3 - Paris Rental Scam (BLOCK):
+- Customer: Looking for Paris apartment
+- Transaction: €4,500 deposit for Montmartre apartment
+- Red flags: Can't visit, owner "in Singapore", Amis et famille required
+- Risk Score: 0.94
+- Action: BLOCK, provide rental scam education, recommend visiting before any payment
+
+Example 4 - Romance Scam (BLOCK):
+- Customer: 62-year-old in Toulouse
+- Transaction: €8,000 to person in Senegal
+- Story: Met on Meetic, "French entrepreneur" needs emergency funds
+- Red flags: Never met, emergency, foreign transfer
+- Risk Score: 0.97
+- Action: BLOCK, educate about romance scams, provide support resources, report to Pharos
+
+RELATED RULES
+- FR-STRIPE-001: Cross-vendor French monitoring
+- GLOBAL-001: High-value threshold
+- EU-wide marketplace fraud detection
+
+PERFORMANCE METRICS
+- Leboncoin Scam Prevention: > 80%
+- Amis et famille Intervention: > 85%
+- Rental Scam Prevention: > 75%
+- False Positive Rate: < 20%
+- French Language Support: 100%
+- Average Review Time: < 45 minutes
+
+TRAINING REQUIREMENTS
+French PayPal fraud analysts must complete:
+- Code de la consommation (Consumer Code)
+- Leboncoin fraud patterns
+- French language (fluency required)
+- Droit de rétractation and garantie légale
+- ACPR regulations
+- Pharos reporting procedures
+- French business culture and communication style
+- Paris rental market dynamics

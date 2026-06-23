@@ -1,0 +1,50 @@
+{
+  "categories": [
+    {"category_id": 1, "category_name": "Electronics", "description": "Electronic devices and gadgets", "parent_category": null},
+    {"category_id": 2, "category_name": "Clothing", "description": "Fashion and apparel", "parent_category": null},
+    {"category_id": 3, "category_name": "Books", "description": "Books and literature", "parent_category": null},
+    {"category_id": 4, "category_name": "Home & Garden", "description": "Home improvement and gardening", "parent_category": null},
+    {"category_id": 5, "category_name": "Sports", "description": "Sports and outdoor equipment", "parent_category": null}
+  ],
+  "customers": [
+    {"customer_id": 1, "first_name": "Alice", "last_name": "Johnson", "email": "alice.johnson@email.com", "phone": "+1-555-2001", "address": "123 Oak Street, Portland, OR", "city": "Portland", "state": "OR", "zip_code": "97201", "registration_date": "2023-01-15"},
+    {"customer_id": 2, "first_name": "Bob", "last_name": "Smith", "email": "bob.smith@email.com", "phone": "+1-555-2002", "address": "456 Pine Avenue, Seattle, WA", "city": "Seattle", "state": "WA", "zip_code": "98101", "registration_date": "2023-02-20"},
+    {"customer_id": 3, "first_name": "Carol", "last_name": "Williams", "email": "carol.williams@email.com", "phone": "+1-555-2003", "address": "789 Maple Drive, San Francisco, CA", "city": "San Francisco", "state": "CA", "zip_code": "94101", "registration_date": "2023-03-10"},
+    {"customer_id": 4, "first_name": "David", "last_name": "Brown", "email": "david.brown@email.com", "phone": "+1-555-2004", "address": "321 Cedar Lane, Austin, TX", "city": "Austin", "state": "TX", "zip_code": "73301", "registration_date": "2023-04-05"},
+    {"customer_id": 5, "first_name": "Emma", "last_name": "Davis", "email": "emma.davis@email.com", "phone": "+1-555-2005", "address": "654 Birch Road, Denver, CO", "city": "Denver", "state": "CO", "zip_code": "80201", "registration_date": "2023-05-12"}
+  ],
+  "products": [
+    {"product_id": 1, "category_id": 1, "product_name": "Wireless Bluetooth Headphones", "description": "High-quality wireless headphones with noise cancellation", "price": 199.99, "stock_quantity": 50, "supplier": "TechCorp", "sku": "WBH-001"},
+    {"product_id": 2, "category_id": 1, "product_name": "Smartphone Case", "description": "Protective case for latest smartphone models", "price": 29.99, "stock_quantity": 200, "supplier": "AccessoryPlus", "sku": "SPC-002"},
+    {"product_id": 3, "category_id": 2, "product_name": "Cotton T-Shirt", "description": "100% organic cotton t-shirt in various colors", "price": 24.99, "stock_quantity": 150, "supplier": "FashionForward", "sku": "CTS-003"},
+    {"product_id": 4, "category_id": 2, "product_name": "Denim Jeans", "description": "Classic fit denim jeans", "price": 79.99, "stock_quantity": 75, "supplier": "DenimCo", "sku": "DJ-004"},
+    {"product_id": 5, "category_id": 3, "product_name": "Programming Book", "description": "Complete guide to modern programming", "price": 49.99, "stock_quantity": 30, "supplier": "BookPublishers", "sku": "PB-005"},
+    {"product_id": 6, "category_id": 4, "product_name": "Garden Tool Set", "description": "Complete set of essential gardening tools", "price": 89.99, "stock_quantity": 25, "supplier": "GardenPro", "sku": "GTS-006"},
+    {"product_id": 7, "category_id": 5, "product_name": "Basketball", "description": "Official size basketball", "price": 39.99, "stock_quantity": 40, "supplier": "SportsCorp", "sku": "BB-007"}
+  ],
+  "orders": [
+    {"order_id": 1, "customer_id": 1, "order_date": "2024-01-15", "total_amount": 229.98, "shipping_address": "123 Oak Street, Portland, OR", "order_status": "shipped", "payment_method": "credit_card"},
+    {"order_id": 2, "customer_id": 2, "order_date": "2024-01-16", "total_amount": 104.98, "shipping_address": "456 Pine Avenue, Seattle, WA", "order_status": "delivered", "payment_method": "paypal"},
+    {"order_id": 3, "customer_id": 3, "order_date": "2024-01-17", "total_amount": 49.99, "shipping_address": "789 Maple Drive, San Francisco, CA", "order_status": "processing", "payment_method": "credit_card"},
+    {"order_id": 4, "customer_id": 4, "order_date": "2024-01-18", "total_amount": 169.98, "shipping_address": "321 Cedar Lane, Austin, TX", "order_status": "shipped", "payment_method": "debit_card"},
+    {"order_id": 5, "customer_id": 5, "order_date": "2024-01-19", "total_amount": 89.99, "shipping_address": "654 Birch Road, Denver, CO", "order_status": "delivered", "payment_method": "credit_card"}
+  ],
+  "order_items": [
+    {"order_item_id": 1, "order_id": 1, "product_id": 1, "quantity": 1, "unit_price": 199.99, "total_price": 199.99},
+    {"order_item_id": 2, "order_id": 1, "product_id": 2, "quantity": 1, "unit_price": 29.99, "total_price": 29.99},
+    {"order_item_id": 3, "order_id": 2, "product_id": 3, "quantity": 2, "unit_price": 24.99, "total_price": 49.98},
+    {"order_item_id": 4, "order_id": 2, "product_id": 7, "quantity": 1, "unit_price": 39.99, "total_price": 39.99},
+    {"order_item_id": 5, "order_id": 2, "product_id": 2, "quantity": 1, "unit_price": 29.99, "total_price": 29.99},
+    {"order_item_id": 6, "order_id": 3, "product_id": 5, "quantity": 1, "unit_price": 49.99, "total_price": 49.99},
+    {"order_item_id": 7, "order_id": 4, "product_id": 4, "quantity": 1, "unit_price": 79.99, "total_price": 79.99},
+    {"order_item_id": 8, "order_id": 4, "product_id": 6, "quantity": 1, "unit_price": 89.99, "total_price": 89.99},
+    {"order_item_id": 9, "order_id": 5, "product_id": 6, "quantity": 1, "unit_price": 89.99, "total_price": 89.99}
+  ],
+  "reviews": [
+    {"review_id": 1, "product_id": 1, "customer_id": 1, "rating": 5, "review_text": "Excellent sound quality and comfortable to wear!", "review_date": "2024-01-20"},
+    {"review_id": 2, "product_id": 2, "customer_id": 1, "rating": 4, "review_text": "Good protection for the phone, fits perfectly.", "review_date": "2024-01-21"},
+    {"review_id": 3, "product_id": 3, "customer_id": 2, "rating": 5, "review_text": "Very soft and comfortable t-shirt. Great quality!", "review_date": "2024-01-22"},
+    {"review_id": 4, "product_id": 7, "customer_id": 2, "rating": 4, "review_text": "Good basketball for recreational play.", "review_date": "2024-01-23"},
+    {"review_id": 5, "product_id": 5, "customer_id": 3, "rating": 5, "review_text": "Comprehensive book with great examples.", "review_date": "2024-01-24"}
+  ]
+}

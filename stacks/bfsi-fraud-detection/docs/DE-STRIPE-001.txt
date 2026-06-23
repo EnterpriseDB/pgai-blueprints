@@ -1,0 +1,468 @@
+Fraud Detection Rule: DE-STRIPE-001
+Rule Name: Germany SEPA Fraud Detection
+Region: Germany (DE)
+Payment Vendor: Stripe
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule monitors Stripe transactions in Germany with focus on SEPA (Single Euro Payments Area) fraud, strong consumer protection compliance (Widerrufsrecht), cross-border EU transactions, and fraud patterns specific to the German market including sophisticated phishing and social engineering attacks.
+
+RULE PARAMETERS
+- Threshold Amount: €4,000 EUR (approximately $4,300 USD)
+- Risk Score Threshold: 0.70
+- Action: Review (mandatory review with consumer protection verification)
+- Category: Transaction Limit and Consumer Protection
+- Regulatory Framework: BaFin supervision, German Civil Code (BGB), EU directives
+
+RULE DESCRIPTION
+German consumers benefit from some of the world's strongest consumer protection laws, including mandatory cooling-off periods (Widerrufsrecht), extensive chargeback rights, and strict merchant obligations. However, sophisticated fraud operations also target Germany due to its high GDP and widespread digital payment adoption. This rule balances fraud prevention with German regulatory compliance.
+
+GERMAN-SPECIFIC CONSIDERATIONS
+
+REGULATORY ENVIRONMENT:
+- BaFin (Bundesanstalt für Finanzdienstleistungsaufsicht) - Financial regulator
+- German Civil Code (Bürgerliches Gesetzbuch - BGB)
+- Widerrufsrecht - 14-day right of withdrawal for distance sales
+- Impressum requirement - merchant transparency obligation
+- Payment Services Supervision Act (Zahlungsdiensteaufsichtsgesetz - ZAG)
+- Strong Customer Authentication (SCA) under PSD2
+
+CONSUMER PROTECTION LAWS:
+- Fernabsatzgesetz (Distance Selling Act) - merged into BGB
+- 14-day cooling-off period mandatory for online purchases
+- Right to return goods without reason
+- Clear cancellation policy required
+- Refund processing within 14 days
+- Extensive information obligations for merchants
+
+SEPA CONSIDERATIONS:
+- Single Euro Payments Area includes Germany
+- Direct debit (SEPA Lastschrift) very common in Germany
+- IBAN-based payments standard
+- SEPA Direct Debit fraud patterns
+- Mandate management critical
+
+LANGUAGE AND FORMALITY:
+- German language required for consumer contracts
+- Formal "Sie" vs informal "Du" matters in communications
+- Technical accuracy important (Germans value precision)
+- Clear, detailed explanations expected
+- Impressum (imprint) legally required on merchant websites
+
+TRIGGERING CONDITIONS
+
+This rule triggers when:
+1. Stripe transaction from German account ≥ €4,000
+2. Transaction involves German card, SEPA payment, or German merchant
+3. Fraud risk score ≥ 0.70
+4. Consumer protection compliance concerns
+
+OR special conditions:
+5. SEPA Direct Debit with elevated risk
+6. First high-value transaction (≥ €2,000) on new account
+7. Cross-border EU transaction with red flags
+8. Missing consumer protection requirements (Impressum, Widerrufsrecht)
+9. Merchant non-compliance with German regulations
+
+RISK SCORE CALCULATION
+
+BASE GERMAN RISK: 0.15
+Lower baseline due to strong regulatory environment and lower overall fraud rates
+
+MERCHANT COMPLIANCE (+0.00 to +0.40):
+- No Impressum on website: +0.35 (legal violation)
+- Missing cancellation policy: +0.30
+- No clear Widerrufsrecht information: +0.25
+- Not in German language: +0.20
+- Unclear pricing/total cost: +0.15
+- Suspicious merchant (new, no reviews): +0.30
+
+TRANSACTION CHARACTERISTICS (+0.00 to +0.30):
+- Amount significantly above customer history: +0.25
+- High-risk product category: +0.20
+- Digital goods (limited Widerrufsrecht): +0.15
+- Cross-border to non-EU: +0.25
+- SEPA Direct Debit from new mandate: +0.20
+
+CUSTOMER INDICATORS (+0.00 to +0.30):
+- New account (< 60 days): +0.20
+- No transaction history: +0.15
+- Recent account changes (password, email, IBAN): +0.20
+- Multiple failed payment attempts: +0.20
+- Unverified German address: +0.15
+
+TIMING AND BEHAVIOR (+0.00 to +0.20):
+- Unusual hour (Germans typically don't shop late night): +0.10
+- Multiple rapid transactions: +0.20
+- VPN/proxy from outside Germany: +0.20
+- New device never seen: +0.15
+
+Example Score:
+- Base risk: 0.15
+- No Impressum on merchant site: +0.35
+- Amount 5x customer average: +0.25
+- New account: +0.20
+- VPN detected: +0.20
+- Total: 1.15 → BLOCK TRANSACTION
+
+FRAUD SCENARIOS SPECIFIC TO GERMANY
+
+SCENARIO 1: FINANZAMT (TAX OFFICE) SCAM
+Description: Scammers impersonate German tax authorities requesting payment.
+
+Pattern:
+- Email or call from fake "Finanzamt"
+- Claims of unpaid taxes or tax refund
+- Requests immediate payment via credit card
+- Threatens legal action, fines, or arrest
+- May use official-looking documents
+
+Example:
+- Customer: Berlin resident
+- Contact: Email from "finanzamt-berlin@[fake-domain].de"
+- Claim: €3,500 in back taxes owed
+- Threat: "Legal proceedings within 48 hours"
+- Payment: Stripe payment to fake entity
+- Red flags: Real Finanzamt uses SEPA, not credit cards; sends physical mail first
+- Risk Score: 0.95
+- Action: BLOCK, educate about Finanzamt procedures, report to LKA (Landeskriminalamt)
+
+SCENARIO 2: FAKE ONLINE SHOP (FAKE-SHOP)
+Description: Sophisticated fake e-commerce sites targeting German consumers.
+
+German Specificity:
+- Well-designed German-language sites
+- Appear to comply with German law (fake Impressum)
+- Products at attractive prices
+- Takes payment via Stripe
+- Never delivers goods or delivers counterfeits
+
+Example:
+- Website: "elektronik-discount24.de"
+- Products: iPhones, MacBooks at 20% discount
+- Transaction: €2,800 for MacBook Pro
+- Red flags: Recently registered domain, no real Impressum (fake address), no consumer reviews
+- Customer never receives item or receives counterfeit
+- Risk Score: 0.85
+- Action: HOLD transaction, verify merchant legitimacy, check domain age, verify Impressum
+
+SCENARIO 3: SEPA LASTSCHRIFT (DIRECT DEBIT) FRAUD
+Description: Fraudulent SEPA Direct Debit mandates or unauthorized debits.
+
+Pattern:
+- Customer signs up for "free trial"
+- Provides IBAN for "verification"
+- Unexpectedly charged via SEPA Direct Debit
+- Or completely fraudulent mandate (stolen IBAN)
+- Recurring charges difficult to stop
+
+Example:
+- Customer: Hamburg resident
+- Sign-up: "Free trial" for streaming service
+- Reality: €89.99 charged monthly via SEPA
+- Difficult cancellation process
+- Risk Score: 0.75
+- Action: Review mandate legitimacy, verify customer consent, ensure clear cancellation options
+
+SCENARIO 4: PHISHING - "PAKET" (PACKAGE) SCAM
+Description: Fake package delivery notifications leading to payment requests.
+
+German Variation:
+- SMS or email: "Ihr Paket von DHL/Hermes wartet"
+- Claims customs fee or failed delivery
+- Links to fake payment page
+- Requests credit card payment via Stripe
+- May install malware
+
+Example:
+- Customer receives SMS: "Paket liegt zur Abholung bereit. Gebühr €2.50"
+- Link to fake DHL site
+- Site requests full credit card details
+- Then attempts large purchase (€500-€5,000)
+- Risk Score: Account takeover risk + fraudulent charges
+- Action: If fraudulent transaction detected, BLOCK, notify customer, educate about phishing
+
+SCENARIO 5: ENERGY CRISIS SCAM (ENERGIE-PREISANPASSUNG)
+Description: Scammers exploit energy price volatility to request payments.
+
+Context:
+- German energy prices highly volatile
+- Confusion about government subsidies
+- Scammers impersonate energy companies
+
+Pattern:
+- Email from fake energy provider
+- Claims immediate payment needed for "Preisanpassung" (price adjustment)
+- Or fake government energy subsidy application requiring fee
+- Requests credit card payment
+
+Example:
+- Email: "Vattenfall Dringend: Energiepreisanpassung"
+- Claim: €1,200 immediate payment required
+- Link: Fake payment page
+- Red flags: Real energy companies use SEPA, send physical letters
+- Risk Score: 0.88
+- Action: BLOCK, educate about energy company procedures, report to Verbraucherzentrale
+
+SCENARIO 6: INVESTMENT SCAM (KAPITALANLAGE-BETRUG)
+Description: Fake investment platforms promising high returns.
+
+German Angle:
+- Targets Germans' savings culture
+- Professional-looking platforms
+- Claims of "BaFin-regulated" (false)
+- Crypto, forex, or binary options trading
+- Initial small "returns" shown
+- Large investment requested, then disappears
+
+Example:
+- Platform: "GermanCryptoInvest"
+- Claims: "BaFin-lizenziert, 15% monatliche Rendite"
+- Transaction: €8,000 investment
+- Red flags: BaFin registration fake, guaranteed returns impossible
+- Risk Score: 0.92
+- Action: BLOCK, verify with BaFin registry, educate about investment fraud
+
+SCENARIO 7: ROMANTIC SCAM - "MILITÄR IM AUSLAND"
+Description: Romance scam claiming to be German soldier abroad.
+
+Pattern:
+- Meets victim on dating site
+- Claims to be Bundeswehr (German military) stationed abroad
+- Develops relationship online
+- Eventually needs emergency funds
+- Requests payment via Stripe
+
+Example:
+- Customer: 58-year-old woman in Munich
+- Story: "Bundeswehr officer" in Mali peacekeeping
+- Emergency: Needs €5,000 for medical treatment
+- Red flags: Never met, military storyline, emergency funds
+- Risk Score: 0.94
+- Action: BLOCK, educate about romance scams, provide support resources
+
+CONSUMER PROTECTION COMPLIANCE
+
+WIDERRUFSRECHT (RIGHT OF WITHDRAWAL):
+14-day cooling-off period for distance sales:
+- Customer can cancel without reason
+- Full refund required within 14 days
+- Customer returns goods at own expense (unless agreed otherwise)
+- Exceptions: Perishable goods, customized items, sealed media (if opened)
+
+Merchant MUST provide:
+- Clear cancellation policy in German
+- Sample cancellation form (Muster-Widerrufsformular)
+- Information about cancellation deadline
+- Return address
+
+This rule verifies:
+- Merchant website includes proper Widerrufsrecht information
+- Cancellation process is clear
+- German language documentation provided
+
+IMPRESSUM REQUIREMENT:
+German law requires website imprint with:
+- Company name and legal form
+- Complete address (P.O. box not sufficient)
+- Contact details (phone, email)
+- Commercial register number
+- VAT ID
+- Responsible person's name
+
+This rule checks:
+- Impressum exists and is easily accessible
+- Information appears legitimate (not fake address)
+- Company can be verified in commercial register
+- Red flag if missing or suspicious
+
+PRICE TRANSPARENCY:
+- Total price including VAT must be shown
+- Shipping costs must be clear before checkout
+- No hidden costs allowed
+- Currency must be clear (EUR)
+
+SEPA DIRECT DEBIT MANDATES:
+- Customer must explicitly authorize (signed mandate)
+- Pre-notification required (14 days advance for first debit, 2 days for recurring)
+- Mandate reference number must be provided
+- Customer can reverse debit within 8 weeks (13 months if unauthorized)
+
+STRONG CUSTOMER AUTHENTICATION (SCA)
+
+PSD2 REQUIREMENTS IN GERMANY:
+Germans adopted SCA widely:
+- 3D Secure 2.0 standard
+- Biometric authentication common
+- SMS OTP or app-based authentication
+- Transactions >€30 typically require SCA
+
+EXEMPTIONS:
+- Low-risk transactions (fraud rate dependent)
+- Recurring payments after first SCA
+- Trusted beneficiaries (whitelist)
+- Low-value transactions (<€30)
+
+This rule monitors:
+- SCA bypass attempts
+- Failed SCA leading to suspicious retry patterns
+- New mandates without proper authentication
+
+CROSS-BORDER EU TRANSACTIONS
+
+INTRA-EU COMMERCE:
+- Germany is largest EU economy
+- Significant trade with Netherlands, France, Poland, Italy
+- SEPA payments standard across EU
+- VAT rules for cross-border B2C sales
+- Consumer protection laws apply to EU merchants selling to Germans
+
+RISK FACTORS:
+- Non-EU merchants (outside SEPA area)
+- Merchants in high-fraud EU countries
+- First cross-border purchase over €2,000
+- Merchant doesn't display German language/terms
+
+VERIFICATION:
+- Check merchant EU VAT registration (VIES database)
+- Verify merchant legitimacy in home country
+- Confirm consumer protection compliance
+- Check for German-language terms (required if targeting Germans)
+
+AUTOMATED RESPONSE ACTIONS
+
+WHEN SCORE 0.70-0.80 (Medium-High Risk):
+1. Flag for review by German fraud team
+2. Verify merchant Impressum and compliance
+3. Check consumer protection information
+4. Confirm customer understanding
+5. Provide Widerrufsrecht reminder
+6. Proceed if verification satisfactory
+
+WHEN SCORE 0.80-0.90 (High Risk):
+1. HOLD transaction for manual approval
+2. Contact customer via verified phone
+3. Enhanced merchant verification
+4. Check BaFin registry if investment-related
+5. Verify SEPA mandate if applicable
+6. Block if compliance issues or customer unresponsive
+
+WHEN SCORE > 0.90 (Critical Risk):
+1. BLOCK transaction immediately
+2. Contact customer with fraud warning (in German)
+3. Provide specific scam education
+4. Report to LKA or Bundeskriminalamt if appropriate
+5. Consider account review
+6. Notify BaFin if investment fraud
+
+CUSTOMER COMMUNICATION (GERMAN)
+
+TRANSACTION HOLD MESSAGE:
+"⚠️ TRANSAKTION ZURÜCKGEHALTEN - ZU IHREM SCHUTZ
+
+Wir haben Risikofaktoren bei dieser Transaktion festgestellt:
+• [Spezifische Risiken]
+
+Bitte überprüfen Sie:
+✓ Der Händler ist vertrauenswürdig und verfügt über ein korrektes Impressum
+✓ Sie verstehen die Gesamtkosten einschließlich aller Gebühren
+✓ Sie haben ein 14-tägiges Widerrufsrecht (bei Fernabsatz)
+✓ Sie werden nicht unter Druck gesetzt
+✓ Sie reagieren nicht auf eine unerwartete E-Mail oder SMS
+
+Wichtig: Finanzamt und Behörden fordern niemals sofortige Zahlung per Kreditkarte.
+
+Fragen? Kontaktieren Sie Stripe Support oder die Verbraucherzentrale: 0211-3809-0"
+
+FAKE SHOP WARNING:
+"⚠️ WARNUNG: MÖGLICHER FAKE-SHOP
+
+Dieser Online-Shop zeigt Merkmale eines betrügerischen Shops:
+- Fehlende oder falsche Impressumsangaben
+- Sehr niedrige Preise
+- Neu registrierte Domain
+- Keine verifizierbaren Kundenbewertungen
+
+Empfehlung:
+✓ Prüfen Sie das Impressum auf echt wirkende Adresse und Telefonnummer
+✓ Suchen Sie nach unabhängigen Bewertungen
+✓ Achten Sie auf realistisch Preise
+✓ Nutzen Sie die Watchlist Internet: watchlist-internet.at
+
+Bei Betrug wenden Sie sich an: polizei-beratung.de"
+
+INTEGRATION WITH GERMAN SYSTEMS
+
+BUNDESKRIMINALAMT (BKA):
+- Federal criminal police
+- Cybercrime reporting
+- International fraud coordination
+- Financial crime investigation
+
+LANDESKRIMINALAMT (LKA):
+- State-level criminal police (16 states)
+- Local fraud investigation
+- Regional fraud pattern intelligence
+
+BAFIN:
+- Financial services regulator
+- Investment fraud reporting
+- License verification
+- Consumer warnings about unauthorized providers
+
+VERBRAUCHERZENTRALE:
+- Consumer protection organization
+- Advice for fraud victims
+- Merchant complaint mediation
+- Consumer education
+
+SCHUFA:
+- German credit bureau
+- Identity verification
+- Fraud markers
+- Credit check integration
+
+EXAMPLES
+
+Example 1 - Legitimate Purchase (APPROVE):
+- Customer: Munich, established account
+- Transaction: €3,200 laptop from reputable German merchant
+- Verification: Proper Impressum, clear Widerrufsrecht, German terms
+- Risk Score: 0.45
+- Action: APPROVE with Widerrufsrecht reminder
+
+Example 2 - Fake Shop (BLOCK):
+- Customer: Hamburg
+- Transaction: €2,500 for electronics
+- Red flags: No real Impressum, domain 3 weeks old, too-cheap prices
+- Risk Score: 0.90
+- Action: BLOCK, warn about fake shop, provide verification tips
+
+Example 3 - Finanzamt Scam (BLOCK):
+- Customer: Berlin
+- Transaction: €4,200 to "Finanzamt Collection Services"
+- Red flags: Tax office doesn't use credit cards, pressure tactics
+- Risk Score: 0.97
+- Action: BLOCK immediately, educate about Finanzamt procedures, report to LKA
+
+RELATED RULES
+- GLOBAL-001: High-value threshold (€10,000+)
+- DE-SQUARE-001: Cross-vendor German protection
+- EU-wide SEPA fraud monitoring
+
+PERFORMANCE METRICS
+- Fake Shop Detection: > 85%
+- Tax Scam Prevention: > 90%
+- False Positive Rate: < 12%
+- German Compliance Verification: 100%
+- Average Review Time: < 25 minutes
+
+TRAINING REQUIREMENTS
+German fraud analysts must complete:
+- German consumer protection law (BGB, Widerrufsrecht)
+- BaFin regulations and reporting
+- SEPA Direct Debit systems and fraud
+- Impressum verification techniques
+- German language (fluency required)
+- Cultural understanding of German business practices
+- Verbraucherzentrale coordination

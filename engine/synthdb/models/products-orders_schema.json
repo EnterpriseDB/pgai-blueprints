@@ -1,0 +1,30 @@
+{
+  "model_name": "products-orders",
+  "description": "Products and Orders (example model)",
+  "tables": {
+    "customers": {
+      "primary_key": "customer_id"
+    },
+    "products": {
+      "primary_key": "product_id"
+    },
+    "orders": {
+      "primary_key": "order_id",
+      "foreign_keys": {
+        "customer_id": "customers.customer_id"
+      }
+    },
+    "order_items": {
+      "primary_key": "item_id",
+      "foreign_keys": {
+        "order_id": "orders.order_id",
+        "product_id": "products.product_id"
+      }
+    }
+  },
+  "relationships": [
+    {"parent": "customers", "child": "orders"},
+    {"parent": "orders", "child": "order_items"},
+    {"parent": "products", "child": "order_items"}
+  ]
+}

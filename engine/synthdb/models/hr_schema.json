@@ -1,0 +1,19 @@
+{
+  "model_name": "hr",
+  "description": "Human Resources Management System",
+  "tables": {
+    "departments": {"primary_key": "department_id"},
+    "positions": {"primary_key": "position_id", "foreign_keys": {"department_id": "departments.department_id"}},
+    "employees": {"primary_key": "employee_id", "foreign_keys": {"department_id": "departments.department_id", "position_id": "positions.position_id", "manager_id": "employees.employee_id"}},
+    "salaries": {"primary_key": "salary_id", "foreign_keys": {"employee_id": "employees.employee_id"}},
+    "attendance": {"primary_key": "attendance_id", "foreign_keys": {"employee_id": "employees.employee_id"}}
+  },
+  "relationships": [
+    {"parent": "departments", "child": "positions"},
+    {"parent": "departments", "child": "employees"},
+    {"parent": "positions", "child": "employees"},
+    {"parent": "employees", "child": "employees"},
+    {"parent": "employees", "child": "salaries"},
+    {"parent": "employees", "child": "attendance"}
+  ]
+}

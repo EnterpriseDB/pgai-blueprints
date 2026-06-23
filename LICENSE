@@ -1,0 +1,64 @@
+EnterpriseDB Corporation License Agreement
+Copyright (c) 2025-2026 EnterpriseDB Corporation. All rights reserved.
+
+IMPORTANT: READ THIS LICENSE AGREEMENT CAREFULLY BEFORE USING THIS SOFTWARE.
+
+1. LICENSE GRANT
+
+Subject to the terms and conditions of this Agreement, EnterpriseDB Corporation
+("EDB") grants you a limited, non-exclusive, non-transferable license to use,
+copy, and modify this software and its associated documentation (collectively,
+the "Software") for demonstration, evaluation, and proof-of-concept purposes.
+
+2. RESTRICTIONS
+
+You may not:
+(a) Distribute, sublicense, or transfer the Software to any third party without
+    prior written consent from EDB;
+(b) Use the Software for production workloads without a separate commercial
+    license from EDB;
+(c) Remove or alter any proprietary notices, labels, or marks on the Software;
+(d) Use the Software in any manner that infringes the intellectual property
+    rights of EDB or any third party.
+
+3. INTELLECTUAL PROPERTY
+
+The Software and all copies thereof are proprietary to EDB and title thereto
+remains exclusively with EDB. All rights in the Software not specifically
+granted in this Agreement are reserved to EDB.
+
+4. DISCLAIMER OF WARRANTIES
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. EDB DOES NOT WARRANT
+THAT THE SOFTWARE WILL MEET YOUR REQUIREMENTS OR THAT THE OPERATION OF THE
+SOFTWARE WILL BE UNINTERRUPTED OR ERROR-FREE.
+
+5. LIMITATION OF LIABILITY
+
+IN NO EVENT SHALL EDB BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+6. TERMINATION
+
+This license is effective until terminated. EDB may terminate this license
+at any time if you fail to comply with any term of this Agreement. Upon
+termination, you must destroy all copies of the Software in your possession.
+
+7. GOVERNING LAW
+
+This Agreement shall be governed by and construed in accordance with the
+laws of the Commonwealth of Massachusetts, USA, without regard to its
+conflicts of law provisions.
+
+8. CONTACT
+
+For licensing inquiries, please contact:
+EnterpriseDB Corporation
+https://www.enterprisedb.com

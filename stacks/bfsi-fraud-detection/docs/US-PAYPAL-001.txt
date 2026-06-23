@@ -1,0 +1,196 @@
+Fraud Detection Rule: US-PAYPAL-001
+Rule Name: US PayPal Account Takeover Detection
+Region: United States (US)
+Payment Vendor: PayPal
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule identifies potential account takeover (ATO) attempts on PayPal accounts by analyzing behavioral changes, device fingerprints, and transaction patterns that deviate from established customer norms.
+
+RULE PARAMETERS
+- Risk Score Threshold: 0.80
+- Action: Alert (flag for immediate review, may hold transaction)
+- Category: Account Takeover
+- Review Priority: High
+
+RULE DESCRIPTION
+Account takeover is one of the most damaging types of fraud, where criminals gain unauthorized access to legitimate customer accounts. This rule uses behavioral analytics and anomaly detection specifically tuned for PayPal transaction patterns.
+
+ACCOUNT TAKEOVER INDICATORS
+
+1. LOGIN ANOMALIES
+- Login from new device never previously associated with account
+- Login from IP address in different geographic region
+- Unusual time of day for customer (e.g., 3 AM when normally active during day)
+- Multiple failed login attempts followed by success
+- Password recently changed without customer-initiated request
+
+2. TRANSACTION PATTERN CHANGES
+- Transaction amount significantly higher than historical average
+- Purchase category inconsistent with past behavior
+- Rapid sequence of transactions after account access
+- Immediate changes to account settings (email, phone, address)
+- Attempt to maximize transaction before account is locked
+
+3. DEVICE AND NETWORK SIGNALS
+- New device with no prior history
+- Device fingerprint indicates emulator or virtual machine
+- IP address associated with proxy, VPN, or Tor network
+- Geographic impossibility (transaction from New York 10 minutes after London)
+- Browser/OS combination never seen before
+
+4. PAYPAL-SPECIFIC SIGNALS
+- Unusual use of PayPal balance vs. linked payment method
+- Adding new payment method immediately before large transaction
+- Removing existing payment methods
+- Changing primary email address
+- Disabling two-factor authentication
+
+TRIGGERING CONDITIONS
+This rule triggers when fraud score reaches 0.80 or higher based on weighted combination of:
+
+- New device (weight: 0.25)
+- New location >100 miles from usual (weight: 0.20)
+- Transaction amount >3x average (weight: 0.20)
+- Recent password change (weight: 0.15)
+- High-risk merchant category (weight: 0.10)
+- Time anomaly (unusual hour) (weight: 0.10)
+
+Example calculation:
+- New device: YES (+0.25)
+- New location: YES, 500 miles (+0.20)
+- Amount: $800 vs. avg $150 (5.3x) (+0.20)
+- Password changed: 2 hours ago (+0.15)
+- Merchant: Gift Cards (+0.10)
+- Time: 2:30 AM, usually shops 6-8 PM (+0.10)
+- TOTAL SCORE: 1.00 -> TRIGGER ALERT
+
+AUTOMATED RESPONSE ACTIONS
+
+IMMEDIATE ACTIONS:
+1. Hold transaction for review (do not process)
+2. Send alert to fraud operations team
+3. Trigger additional authentication challenge
+4. Lock account from further transactions (temporary 30-minute hold)
+5. Send notification to customer's verified email and phone
+
+CUSTOMER VERIFICATION:
+- Send push notification to PayPal mobile app
+- Require two-factor authentication code
+- Ask security questions
+- Request photo ID if high-value transaction
+- Video verification for extreme cases
+
+INVESTIGATION STEPS:
+1. Review last 24 hours of account activity
+2. Check for setting changes (email, password, payment methods)
+3. Compare device/location with historical data
+4. Contact customer through verified channels
+5. Review linked accounts for similar suspicious activity
+
+EXAMPLES
+
+Example 1 - Confirmed Account Takeover:
+Customer Profile:
+- Name: Sarah Chen, San Francisco, CA
+- Account age: 5 years
+- Typical activity: $50-$200 purchases, 2-3 times per month
+- Usual merchants: Amazon, Target, grocery stores
+
+Suspicious Event:
+- Login from Miami, FL (new location)
+- Device: Android emulator (never used mobile before)
+- Transaction: $1,500 gift cards from "Gift Cards 4 Less"
+- Time: 4:15 AM (customer usually shops 11 AM - 3 PM)
+- Recent change: Password changed 1 hour ago
+
+Fraud Score Calculation:
+- New device/emulator: 0.30 (high weight for emulator)
+- New location (2,500 miles): 0.20
+- Amount 10x average: 0.20
+- Recent password change: 0.15
+- High-risk merchant (gift cards): 0.10
+- Unusual time: 0.10
+- TOTAL: 1.05 -> CONFIRMED FRAUD
+
+Actions Taken:
+- Transaction BLOCKED immediately
+- Account frozen
+- Customer contacted at verified phone number
+- Customer confirmed account was compromised
+- Password reset required, new device authorization needed
+
+Example 2 - Legitimate Travel (False Positive):
+Customer Profile:
+- Name: James Wilson, Chicago, IL
+- Business traveler, frequent PayPal user
+
+Event:
+- Login from Phoenix, AZ (new city)
+- Device: Same iPhone previously used
+- Transaction: $85 hotel charge
+- Time: 6:30 PM (normal)
+
+Fraud Score: 0.45 (below threshold)
+- New location but known device
+- Transaction consistent with travel patterns
+- Result: ALLOWED
+
+Example 3 - Partial Takeover Attempt:
+- Multiple failed login attempts from Romania
+- Customer successfully logged in from normal location (Boston)
+- Immediately changed password
+- Made $40 purchase from familiar merchant
+
+Fraud Score: 0.60
+- Failed login attempts increase score but successful legitimate activity
+- Result: ALERT sent to customer, monitoring increased
+
+PAYPAL INTEGRATION
+This rule leverages PayPal's API data:
+- PayPal Seller Protection status
+- Buyer dispute history
+- Account standing and limits
+- Linked bank account verification status
+- Historical chargeback rates
+
+RELATED RULES
+- GLOBAL-001: High-value transaction review (overlapping protection)
+- US-PAYPAL velocity checks (separate system)
+- Device fingerprinting across all vendors
+
+COMPLIANCE
+Supports compliance with:
+- PayPal's Acceptable Use Policy
+- FFIEC Authentication Guidance
+- NIST 800-63-3 Digital Identity Guidelines
+- State data breach notification laws
+
+CUSTOMER COMMUNICATION
+When account is flagged:
+
+Email Template:
+"We noticed unusual activity on your PayPal account. For your security, we've temporarily held a recent transaction. Please verify your identity by clicking the link below or calling our fraud prevention team at 1-888-xxx-xxxx."
+
+SMS Template:
+"PayPal Security Alert: Unusual activity detected. Transaction held. Reply YES if this was you, or call 1-888-xxx-xxxx immediately."
+
+PERFORMANCE METRICS
+- ATO Detection Rate: > 92%
+- False Positive Rate: < 8%
+- Customer Contact Time: < 15 minutes for high-risk cases
+- Account Recovery Time: < 2 hours average
+
+ESCALATION CRITERIA
+Escalate to senior fraud analyst when:
+- Transaction amount > $5,000
+- Multiple accounts showing similar pattern (coordinated attack)
+- Customer cannot be reached within 1 hour
+- Suspected organized fraud ring
+
+TUNING PARAMETERS
+Rule can be adjusted seasonally:
+- Holiday shopping (Nov-Dec): Increase tolerance for spending spikes
+- Tax season (Apr): Higher transaction amounts expected
+- Travel seasons (Summer): Reduce location change penalties
+- Back to school (Aug-Sep): Different merchant category patterns

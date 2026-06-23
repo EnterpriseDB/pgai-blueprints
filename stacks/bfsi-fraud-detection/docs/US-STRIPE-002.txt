@@ -1,0 +1,141 @@
+Fraud Detection Rule: US-STRIPE-002
+Rule Name: US Rapid Transaction Velocity
+Region: United States (US)
+Payment Vendor: Stripe
+Effective Date: January 1, 2024
+
+OVERVIEW
+This rule detects suspicious rapid-fire transaction patterns through Stripe that may indicate card testing, account takeover, or automated fraud attempts.
+
+RULE PARAMETERS
+- Time Window: 10 minutes
+- Transaction Count Threshold: 5 or more transactions
+- Risk Score Threshold: 0.75
+- Action: Block (automatic block with alert)
+- Category: Velocity Check
+
+RULE DESCRIPTION
+Velocity-based fraud detection identifies accounts or payment methods attempting multiple transactions in rapid succession. This pattern is commonly associated with:
+
+1. Card testing - Criminals testing stolen card numbers
+2. Account takeover - Fraudster maximizing stolen account access
+3. Bot attacks - Automated systems attempting fraudulent purchases
+4. Synthetic identity fraud - Testing newly created fake identities
+
+TRIGGERING CONDITIONS
+A transaction triggers this rule when ANY of the following occur within a 10-minute window:
+
+SCENARIO A - Same Customer Account:
+- 5 or more transactions from same customer_id
+- Regardless of success or failure status
+- Risk score of 0.75 or higher on latest transaction
+
+SCENARIO B - Same Payment Card:
+- 5 or more transaction attempts using same card (last 4 digits)
+- Including declined transactions
+- Different merchant or amount variations
+
+SCENARIO C - Same IP Address:
+- 5 or more transactions from same IP address
+- Different customer accounts or cards
+- Indicates possible bot or compromised network
+
+FRAUD INDICATORS
+- Rapid succession of small transactions (under $10) - card testing
+- Incrementing transaction amounts - finding card limit
+- Multiple failed attempts followed by success
+- Geographic impossibility - transactions from distant locations in short time
+- Randomized amounts suggesting automated script
+- Mixed merchant categories indicating broad attack
+
+AUTOMATED RESPONSE
+When this rule is triggered:
+1. IMMEDIATE: Block current transaction
+2. Place 15-minute hold on account for additional transactions
+3. Alert fraud operations team in real-time
+4. Trigger CAPTCHA or additional authentication for next attempt
+5. Log all related transactions for investigation
+6. Consider temporary card block if multiple cards affected
+
+EXAMPLES
+
+Example 1 - Card Testing Attack:
+- Pattern: 8 transactions in 3 minutes
+- Amounts: $1.00, $2.50, $3.75, $5.00, etc.
+- Merchants: Multiple different merchants
+- Cards: Same card last 4 digits, different CVV attempts
+- Result: BLOCK - Clear card testing pattern
+
+Example 2 - Account Takeover:
+- Pattern: 6 transactions in 8 minutes
+- Customer: Normally 2-3 transactions per month
+- New pattern: Rapid purchases of gift cards and electronics
+- Location: IP from different state than usual
+- Device: New device never seen before
+- Result: BLOCK - Account takeover, freeze account
+
+Example 3 - Legitimate Velocity (False Positive):
+- Pattern: 4 transactions in 5 minutes
+- Context: Customer shopping at physical mall
+- Merchants: Starbucks, Apple Store, Gap, Macy's
+- Amounts: Normal retail amounts
+- History: Known device and location
+- Result: ALLOW - Legitimate shopping behavior, but flag for review
+
+Example 4 - Bot Attack:
+- Pattern: 12 transactions in 2 minutes
+- IP: Known proxy/VPN service
+- Accounts: 6 different customer accounts
+- Cards: All different cards
+- Timing: Precise 10-second intervals (automated)
+- Result: BLOCK ALL - Bot attack, block IP range
+
+TIME WINDOW CONSIDERATIONS
+The 10-minute sliding window means:
+- Transaction at 10:00:00
+- Transaction at 10:03:00
+- Transaction at 10:05:00
+- Transaction at 10:08:00
+- Transaction at 10:09:00 <- This triggers the rule
+
+But if the next transaction is at 10:11:00, the 10:00:00 transaction falls out of the window.
+
+EXCEPTION HANDLING
+Some legitimate scenarios may trigger this rule:
+- Subscription renewals (batch processing)
+- Family accounts with multiple authorized users
+- Business accounts with multiple employees
+- Payment retries after technical failures
+
+For these cases:
+- Maintain allowlist of known legitimate high-velocity accounts
+- Business accounts get higher thresholds (10 transactions/10 minutes)
+- Subscription merchants get special handling
+
+INTEGRATION WITH OTHER RULES
+This rule works in conjunction with:
+- US-STRIPE-001: High-value amounts compound risk
+- GLOBAL-003: Gambling merchants often see velocity attacks
+- Device fingerprinting: New devices increase risk score
+- IP reputation: Known bad IPs get lower thresholds
+
+COMPLIANCE AND LEGAL
+This rule supports:
+- Payment Card Industry Data Security Standard (PCI DSS) Requirement 6.5.10
+- Stripe's fraud prevention best practices
+- Federal Trade Commission (FTC) safeguards rule
+- Reduces liability for merchant account holders
+
+PERFORMANCE METRICS
+Target metrics:
+- True Positive Rate: > 85% (correctly identify fraud)
+- False Positive Rate: < 3% (minimize customer friction)
+- Response Time: < 100ms (real-time blocking)
+- Attack Prevention: Block 95%+ of automated attacks
+
+TUNING NOTES
+Velocity thresholds can be adjusted based on:
+- Merchant type (e-commerce vs. physical retail)
+- Time of day (higher activity during business hours)
+- Customer risk profile (trusted customers get higher limits)
+- Historical patterns (seasonal shopping events like Black Friday)

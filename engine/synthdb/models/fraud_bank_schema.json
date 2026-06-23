@@ -1,0 +1,25 @@
+{
+  "model_name": "fraud_bank",
+  "description": "BFSI Fraud Detection — synthetic OLTP customers/accounts/transactions with realistic fraud patterns (region+vendor+amount). Used by stacks/bfsi-fraud-detection pipeline Step 1.",
+  "tables": {
+    "customers": {
+      "primary_key": "customer_id"
+    },
+    "accounts": {
+      "primary_key": "account_id",
+      "foreign_keys": {
+        "customer_id": "customers.customer_id"
+      }
+    },
+    "transactions": {
+      "primary_key": "tx_id",
+      "foreign_keys": {
+        "account_id": "accounts.account_id"
+      }
+    }
+  },
+  "relationships": [
+    {"parent": "customers", "child": "accounts"},
+    {"parent": "accounts", "child": "transactions"}
+  ]
+}

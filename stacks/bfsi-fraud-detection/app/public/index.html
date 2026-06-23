@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>EDB Postgres AI — Core Banking Simulator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&display=swap');
+:root{
+  --bg:#030712;--s1:#0d1117;--s2:#161b22;--s3:#21262d;--bd:#30363d;
+  --acc:#00ff88;--blue:#0ea5e9;--amber:#f59e0b;--red:#ef4444;
+  --green:#3fb950;--purple:#a855f7;--orange:#f97316;
+  --text:#e6edf3;--muted:#8b949e;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,255,136,.02)1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,.02)1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;}
+
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:100;background:rgba(3,7,18,.95);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--bd);padding:10px 24px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:10px;}
+.ldot{width:11px;height:11px;background:var(--acc);border-radius:50%;box-shadow:0 0 12px var(--acc);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.ltxt{display:flex;flex-direction:column;}
+.lsub{display:flex;align-items:center;}
+.lsub img{height:40px;width:auto;}
+.lmain{font-family:'Syne',sans-serif;font-size:14px;font-weight:600;color:#51b4e5;letter-spacing:1px;margin-left:58px;}
+.hright{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.pbadge{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;border:1px solid var(--bd);color:var(--muted);background:var(--s1);transition:all .3s;}
+.pbadge.on{border-color:var(--acc);color:var(--acc);background:rgba(0,255,136,.06);}
+.wsbadge{font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid var(--bd);color:var(--muted);background:var(--s2);}
+.wsbadge.on{border-color:var(--green);color:var(--green);}
+
+/* BANNER */
+#banner{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-120px);z-index:9999;
+  padding:14px 40px;border-radius:12px;font-family:'Syne',sans-serif;font-size:18px;font-weight:800;
+  letter-spacing:2px;text-transform:uppercase;white-space:nowrap;border:2px solid;opacity:0;pointer-events:none;
+  transition:opacity .35s,transform .4s cubic-bezier(0.34,1.56,0.64,1);}
+#banner.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#banner.live{background:rgba(0,255,136,.14);border-color:var(--acc);color:var(--acc);box-shadow:0 12px 40px rgba(0,255,136,.3);}
+#banner.paused{background:rgba(245,158,11,.14);border-color:var(--amber);color:var(--amber);}
+#banner.stopped{background:rgba(239,68,68,.14);border-color:var(--red);color:var(--red);}
+
+/* MAIN */
+.main{position:relative;z-index:1;padding:20px 24px 80px;max-width:1800px;margin:0 auto;}
+.phase{display:none;} .phase.on{display:block;animation:fin .4s ease;}
+@keyframes fin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* SETUP */
+.setup{max-width:660px;margin:30px auto;}
+.stitle{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:8px;
+  background:linear-gradient(135deg,var(--acc),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.ssub{color:var(--muted);font-size:13px;margin-bottom:22px;line-height:1.7;}
+.card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:12px;}
+.ctitle{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:1px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.ctitle::before{content:'';width:3px;height:12px;background:var(--acc);border-radius:2px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.fg{display:flex;flex-direction:column;gap:7px;}
+.fg label{font-size:13px;color:var(--muted);}
+.fg input,.fg select{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 13px;
+  color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;outline:none;width:100%;
+  transition:border-color .2s,box-shadow .2s;}
+.fg input:focus,.fg select:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(0,255,136,.1);}
+select option{background:var(--s2);}
+select[multiple]{height:88px;}
+.errbanner{background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:8px;
+  padding:10px 13px;font-size:12px;color:var(--red);margin-top:10px;display:none;line-height:1.6;}
+
+/* PROGRESS */
+.prog{margin-top:16px;display:none;}
+.phdr2{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px;}
+.pbar{height:5px;background:var(--s3);border-radius:3px;overflow:hidden;}
+.pfill{height:100%;background:linear-gradient(90deg,var(--acc),var(--blue));border-radius:3px;transition:width .4s;width:0;}
+.plog{margin-top:10px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px;
+  font-size:11px;color:var(--muted);max-height:150px;overflow-y:auto;line-height:2.1;}
+.ok{color:var(--green);}.er{color:var(--red);}.in{color:var(--blue);}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 22px;
+  border-radius:8px;border:none;outline:none;font-family:'JetBrains Mono',monospace;
+  font-size:13px;font-weight:700;letter-spacing:.5px;cursor:pointer;
+  user-select:none;-webkit-user-select:none;transition:transform .15s,box-shadow .15s,background .15s;
+  -webkit-appearance:none;touch-action:manipulation;}
+.btn:not([disabled]):hover{transform:translateY(-2px);cursor:pointer;}
+.btn:not([disabled]):active{transform:translateY(0);}
+.btn[disabled]{opacity:.4;cursor:not-allowed !important;transform:none !important;}
+.btn-g{background:var(--acc);color:#000;} .btn-g:not([disabled]):hover{background:#00e87a;box-shadow:0 0 24px rgba(0,255,136,.4);}
+.btn-b{background:var(--blue);color:#fff;} .btn-b:not([disabled]):hover{background:#38bdf8;box-shadow:0 0 24px rgba(14,165,233,.4);}
+.btn-a{background:var(--amber);color:#000;} .btn-a:not([disabled]):hover{background:#fbbf24;box-shadow:0 0 24px rgba(245,158,11,.4);}
+.btn-r{background:var(--red);color:#fff;} .btn-r:not([disabled]):hover{background:#dc2626;box-shadow:0 0 24px rgba(239,68,68,.4);}
+.btn-p{background:var(--purple);color:#fff;} .btn-p:not([disabled]):hover{box-shadow:0 0 24px rgba(168,85,247,.4);}
+.btn-gh{background:var(--s2);color:var(--text);border:1px solid var(--bd);}
+.btn-gh:not([disabled]):hover{border-color:var(--acc);color:var(--acc);}
+.btn-full{width:100%;margin-top:10px;}
+.btn-sm{padding:6px 13px;font-size:11px;}
+
+/* PHASE 2 CONTROLS */
+.cbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;padding:12px 16px;
+  background:var(--s1);border:1px solid var(--bd);border-radius:12px;}
+.ph2-top-left .cbar{margin-bottom:0;}
+.csep{width:1px;height:30px;background:var(--bd);}
+.cgrp{display:flex;align-items:center;gap:8px;}
+.clbl{font-size:12px;color:var(--muted);white-space:nowrap;}
+.spacer{flex:1;}
+.ssl{-webkit-appearance:none;width:100px;height:4px;background:var(--s3);border-radius:2px;outline:none;border:none;padding:0;cursor:pointer;}
+.ssl::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;background:var(--acc);border-radius:50%;cursor:pointer;box-shadow:0 0 8px rgba(0,255,136,.5);}
+.tval{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--acc);line-height:1;}
+.tlbl{font-size:11px;color:var(--muted);}
+.ldot2{width:8px;height:8px;background:var(--muted);border-radius:50%;flex-shrink:0;}
+.ldot2.on{background:var(--acc);box-shadow:0 0 8px var(--acc);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+#slbl{font-size:13px;font-weight:700;color:var(--muted);min-width:60px;}
+
+/* PHASE 2 — live + 4 stat cards | architecture diagram (dark panel) */
+.ph2-top{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;align-items:stretch;}
+.ph2-top-left{display:flex;flex-direction:column;gap:18px;min-width:0;}
+.stats.stats-ph2{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:14px;margin:0;flex:1;}
+.stats.stats-ph2 .sc{display:flex;flex-direction:column;justify-content:center;}
+.ph2-flow{background:#000;border:1px solid #262626;border-radius:12px;padding:14px;display:flex;flex-direction:column;
+  min-height:360px;min-width:0;box-shadow:0 2px 12px rgba(0,0,0,.35);}
+.ph2-flow-svgwrap{flex:1;min-height:0;display:flex;align-items:stretch;justify-content:stretch;background:#000;
+  border-radius:10px;padding:6px 4px;}
+.ph2-flow svg{width:100%;height:100%;display:block;}
+/* Initialize: TX types multiselect on light grey */
+.fg-txtypes{background:#000;border:1px solid #333;border-radius:10px;padding:12px 14px 10px;}
+.fg-txtypes label{color:#fff;}
+.fg-txtypes select{min-height:120px;background:#000;color:#fff;border:1px solid #444;border-radius:8px;}
+.fg-txtypes select option{background:#000;color:#fff;}
+@media(max-width:1024px){
+  .ph2-top{grid-template-columns:1fr;}
+  .ph2-flow{min-height:260px;}
+}
+
+/* STAT CARDS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+.sc{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:18px;}
+@keyframes scf{0%{background:rgba(0,255,136,.12)}100%{background:var(--s1)}}
+.sc.fl{animation:scf .5s ease;}
+.slb{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:7px;}
+.sv{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1;}
+.sd{font-size:11px;color:var(--muted);margin-top:5px;}
+.cg{color:var(--green)}.cr{color:var(--red)}.ca{color:var(--amber)}.cb{color:var(--blue)}.cp{color:var(--purple)}
+
+/* TABS */
+.tabs{display:flex;gap:3px;padding-top:16px;margin-bottom:18px;border-bottom:1px solid var(--bd);overflow-x:auto;}
+.tab{padding:8px 18px;border-radius:8px 8px 0 0;border:1px solid transparent;background:transparent;
+  color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;
+  cursor:pointer;letter-spacing:.4px;border-bottom:none;position:relative;bottom:-1px;
+  transition:color .2s;white-space:nowrap;}
+.tab.on{background:var(--s1);border-color:var(--bd);border-bottom-color:var(--s1);color:var(--acc);}
+.tab:not(.on):hover{color:var(--text);}
+.tpanel{display:none;} .tpanel.on{display:block;animation:fin .3s ease;}
+
+/* DASHBOARD */
+.dbody{display:grid;grid-template-columns:1fr 380px;gap:16px;}
+.dleft,.dright{display:flex;flex-direction:column;gap:14px;}
+.panel{background:var(--s1);border:1px solid var(--bd);border-radius:12px;overflow:hidden;}
+.phdr{padding:12px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;}
+.ptitle{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:7px;}
+.ptag{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;text-transform:uppercase;}
+.ptag-ch{background:rgba(14,165,233,.15);color:var(--blue);border:1px solid rgba(14,165,233,.3);}
+.ptag-rw{background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.3);}
+.ptag-mv{background:rgba(0,255,136,.12);color:var(--acc);border:1px solid rgba(0,255,136,.3);}
+.ptag-kafka{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);}
+
+/* TOGGLE SWITCH */
+.toggle-sw{position:relative;width:36px;height:20px;flex-shrink:0;margin-left:auto;}
+.toggle-sw input{opacity:0;width:0;height:0;}
+.toggle-sl{position:absolute;cursor:pointer;inset:0;background:var(--s3);border-radius:20px;transition:background .3s;}
+.toggle-sl:before{content:'';position:absolute;width:14px;height:14px;left:3px;bottom:3px;
+  background:var(--muted);border-radius:50%;transition:transform .3s,background .3s;}
+.toggle-sw input:checked + .toggle-sl{background:var(--acc);}
+.toggle-sw input:checked + .toggle-sl:before{transform:translateX(16px);background:#fff;}
+.toggle-sw input:disabled + .toggle-sl{opacity:.5;cursor:not-allowed;}
+
+/* TX FEED */
+.txhdr{display:grid;grid-template-columns:70px 130px 1fr 100px 68px;gap:8px;padding:7px 18px;
+  font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;
+  border-bottom:1px solid var(--bd);background:var(--s2);}
+.txlist{max-height:320px;overflow-y:auto;}
+.txrow{display:grid;grid-template-columns:70px 130px 1fr 100px 68px;gap:8px;padding:8px 18px;
+  border-bottom:1px solid rgba(48,54,61,.4);font-size:12px;align-items:center;
+  transition:background .15s;animation:fin .25s ease;}
+.txrow:hover{background:var(--s2);}
+.txb{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;text-align:center;}
+.CREDIT{background:rgba(63,185,80,.15);color:var(--green);}
+.DEBIT{background:rgba(248,81,73,.15);color:var(--red);}
+.TRANSFER{background:rgba(14,165,233,.15);color:var(--blue);}
+.PAYMENT{background:rgba(245,158,11,.15);color:var(--amber);}
+.txname{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.txnum{font-size:10px;color:var(--muted);}
+.txdesc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;}
+.txa{text-align:right;font-weight:700;font-size:12px;}
+.txa.pos{color:var(--green)}.txa.neg{color:var(--red)}
+.txt{color:var(--muted);font-size:10px;text-align:right;}
+.bkg{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bd);}
+.bki{background:var(--s1);padding:12px 16px;}
+.bkl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;font-weight:600;}
+.bkv{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+.aclist{max-height:240px;overflow-y:auto;}
+.acrow{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;
+  border-bottom:1px solid rgba(48,54,61,.4);font-size:12px;transition:background .15s;}
+.acrow:hover{background:var(--s2);}
+.aci{display:flex;flex-direction:column;gap:2px;flex:1;}
+.acn{font-weight:700;font-size:12px;} .acs{color:var(--muted);font-size:10px;}
+.acbar{height:3px;background:var(--s3);border-radius:2px;margin-top:3px;width:100px;overflow:hidden;}
+.acfill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--acc));transition:width .6s;}
+.acbal{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;text-align:right;min-width:85px;}
+
+/* ANALYTICS STATUS BAR */
+.abar{display:flex;align-items:center;gap:14px;padding:12px 18px;background:var(--s1);
+  border:1px solid var(--bd);border-radius:10px;margin-bottom:16px;font-size:12px;flex-wrap:wrap;}
+.aitem{display:flex;align-items:center;gap:7px;}
+.metric-box{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:8px 14px;text-align:center;}
+.metric-val{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;line-height:1;}
+.metric-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;margin-top:3px;}
+
+/* COMPARISON */
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.comp-card{background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:20px;}
+.comp-header{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.kv-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(48,54,61,.4);font-size:13px;}
+.kv-key{color:var(--muted);}
+.kv-val{font-weight:700;}
+.lag-bar-wrap{margin-top:12px;}
+.lag-bar{height:8px;background:var(--s3);border-radius:4px;overflow:hidden;margin-top:4px;}
+.lag-fill{height:100%;border-radius:4px;transition:width .6s;}
+
+/* KAFKA */
+.kafka-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+.kcard{background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:16px;}
+.kcard-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.kcard-val{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;}
+.kstatus{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;}
+.kstatus.running{background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.3);}
+.kstatus.stopped{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.3);}
+.kstatus.unknown{background:rgba(139,148,158,.12);color:var(--muted);border:1px solid var(--bd);}
+.ktopic{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;
+  background:var(--s2);border:1px solid var(--bd);border-radius:8px;margin-bottom:6px;font-size:12px;}
+.ktopic-name{font-weight:600;color:var(--orange);}
+.ktopic-msg{color:var(--muted);}
+
+/* SEARCH */
+.search-wrap{padding:24px;}
+.sbar{display:flex;gap:10px;margin-bottom:18px;align-items:center;}
+.siw{position:relative;flex:1;}
+.siw input{padding:12px 12px 12px 40px;font-size:14px;background:var(--s2);border:1px solid var(--bd);
+  border-radius:9px;color:var(--text);font-family:'JetBrains Mono',monospace;outline:none;width:100%;
+  transition:border-color .2s,box-shadow .2s;}
+.siw input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(0,255,136,.1);}
+.sico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:15px;pointer-events:none;}
+.sfilt{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;align-items:end;}
+.sfilt .fg label{font-size:12px;}
+.sfilt .fg select,.sfilt .fg input{padding:9px 12px;font-size:13px;border-radius:8px;}
+.stable{width:100%;border-collapse:collapse;font-size:13px;}
+.stable th{padding:9px 14px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:1px;border-bottom:1px solid var(--bd);background:var(--s2);font-weight:600;}
+.stable td{padding:10px 14px;border-bottom:1px solid rgba(48,54,61,.4);vertical-align:top;}
+.stable tr:hover td{background:var(--s2);}
+.stable tr.fr td{background:rgba(239,68,68,.04);}
+.rmk{color:var(--muted);font-size:11px;line-height:1.5;max-width:280px;}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);}
+.eico{font-size:40px;margin-bottom:12px;}
+.ftable{width:100%;border-collapse:collapse;font-size:13px;}
+.ftable th{padding:9px 14px;text-align:left;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--bd);background:var(--s2);font-weight:600;}
+.ftable td{padding:10px 14px;border-bottom:1px solid rgba(48,54,61,.4);}
+
+/* STATUS BAR */
+.status{position:fixed;bottom:0;left:0;right:0;background:rgba(3,7,18,.97);backdrop-filter:blur(10px);
+  border-top:1px solid var(--bd);padding:7px 24px;display:flex;align-items:center;gap:18px;font-size:12px;color:var(--muted);z-index:100;}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.sdot.g{background:var(--green);box-shadow:0 0 6px var(--green);}
+.sdot.r{background:var(--red);}
+.sdot.a{background:var(--amber);}
+#toast{position:fixed;bottom:48px;right:20px;background:var(--s1);border:1px solid var(--bd);
+  border-radius:10px;padding:11px 16px;font-size:12px;z-index:9998;opacity:0;transform:translateY(16px);
+  transition:all .3s;max-width:380px;line-height:1.5;pointer-events:none;}
+#toast.show{opacity:1;transform:translateY(0);}
+#toast.ts{border-color:var(--green);}#toast.te{border-color:var(--red);}#toast.ti{border-color:var(--blue);}
+
+/* Enhanced Fraud Alert Notification */
+.fraud-alert-box{position:fixed;bottom:48px;right:20px;width:420px;background:var(--s1);
+  border:2px solid var(--red);border-radius:12px;padding:0;z-index:9999;
+  opacity:0;transform:translateY(100px);transition:all .4s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow:0 12px 40px rgba(239,68,68,.3);pointer-events:none;}
+.fraud-alert-box.show{opacity:1;transform:translateY(0);pointer-events:all;}
+.fraud-alert-header{background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(239,68,68,.05));
+  padding:14px 16px;border-bottom:1px solid var(--red);display:flex;align-items:center;gap:10px;
+  border-radius:10px 10px 0 0;}
+.fraud-alert-icon{font-size:24px;animation:pulse-alert 2s infinite;}
+@keyframes pulse-alert{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.fraud-alert-title{flex:1;}
+.fraud-alert-title h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;
+  color:var(--red);margin:0;text-transform:uppercase;letter-spacing:1px;}
+.fraud-alert-title p{font-size:11px;color:var(--muted);margin:2px 0 0 0;}
+.fraud-alert-close{background:none;border:none;color:var(--muted);font-size:18px;
+  cursor:pointer;padding:0;width:24px;height:24px;display:flex;align-items:center;
+  justify-content:center;border-radius:4px;transition:all .2s;}
+.fraud-alert-close:hover{background:var(--s2);color:var(--red);}
+.fraud-alert-body{padding:16px;}
+.fraud-alert-row{display:flex;justify-content:space-between;padding:8px 0;
+  border-bottom:1px solid var(--bd);font-size:12px;}
+.fraud-alert-row:last-child{border-bottom:none;}
+.fraud-alert-label{color:var(--muted);font-weight:600;}
+.fraud-alert-value{color:var(--text);font-weight:600;}
+.fraud-alert-value.highlight{color:var(--red);font-size:14px;}
+.fraud-alert-badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.fraud-alert-badge.ml{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.3);}
+.fraud-alert-badge.rule{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3);}
+.fraud-alert-badge.kafka{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.3);}
+.fraud-alert-badge.ch{background:rgba(14,165,233,.1);color:var(--blue);border:1px solid rgba(14,165,233,.3);}
+.fraud-alert-badge.rw{background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.3);}
+
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="banner"></div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="logo">
+    <div class="ltxt">
+      <div class="lsub"><img src="logo.svg" alt="EDB Postgres AI"></div>
+      <div class="lmain">Core Banking Simulator</div>
+    </div>
+  </div>
+  <div class="hright">
+    <div class="wsbadge" id="wsBadge">WS: Off</div>
+    <div class="pbadge on" id="badge1">Phase 1</div>
+    <div class="pbadge"    id="badge2">Phase 2</div>
+    <div style="font-size:12px;color:var(--muted)" id="clock"></div>
+  </div>
+</div>
+
+<div class="main">
+<!-- ═══ PHASE 1 ═══ -->
+<div class="phase on" id="ph1">
+<div class="setup">
+  <div class="stitle">Initialize Banking Engine</div>
+  <div class="ssub">
+    Enter PostgreSQL credentials. The simulator will create the database, seed data, and activate
+    <strong style="color:var(--acc)">3 real-time pipelines</strong>:
+    ClickHouse native CDC · RisingWave MVs · Kafka Debezium.<br><br>
+    <strong style="color:var(--blue)">Start Docker first:</strong>
+    <code style="background:var(--s2);padding:2px 9px;border-radius:4px;margin-left:4px">./docker-run.sh start</code>
+    <span style="color:var(--amber);font-size:11px;margin-left:8px">⚠ On EC2: open ports 3001, 8123, 4566, 8083, 9092</span>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">PostgreSQL Connection</div>
+    <div class="row2">
+      <div class="fg"><label>Hostname</label><input type="text" id="dbHost" value="pgd" placeholder="pgd"></div>
+      <div class="fg"><label>Port</label><input type="number" id="dbPort" value="5432"></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Database</label><input type="text" id="dbName" value="demo"></div>
+      <div class="fg"><label>Username</label><input type="text" id="dbUser" value="postgres"></div>
+    </div>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Password <span style="color:var(--muted);font-size:11px">(blank if none)</span></label>
+      <input type="password" id="dbPass" value="secret" placeholder="secret" autocomplete="off">
+    </div>
+    <button class="btn btn-b" style="width:100%" onclick="testConn()">🔌 Test Connection</button>
+    <div id="connResult" style="display:none;margin-top:10px;padding:10px 13px;border-radius:8px;font-size:12px;line-height:1.6;border:1px solid"></div>
+    <div class="errbanner" id="dbErr"></div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">Data Snapshot</div>
+    <div class="row2">
+      <div class="fg"><label>Customers</label><input type="number" id="numC" value="500" min="5" max="2000"></div>
+      <div class="fg"><label>Accounts per Customer</label><select id="accPC"><option value="1">1</option><option value="2" selected>1–2</option><option value="3">1–3</option></select></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Historical TX per Account</label><input type="number" id="numTx" value="250" min="5" max="500"></div>
+      <div class="fg"><label>Balance Range</label><select id="balR"><option value="small">$1K–$50K</option><option value="medium" selected>$10K–$500K</option><option value="large">$100K–$5M</option></select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ctitle">Simulation Parameters</div>
+    <div class="row2">
+      <div class="fg fg-txtypes">
+        <label>TX Types</label>
+        <select id="txTypes" multiple>
+          <option value="CREDIT" selected>CREDIT — Deposits</option>
+          <option value="DEBIT" selected>DEBIT — Purchases</option>
+          <option value="TRANSFER" selected>TRANSFER — ACH/Wire</option>
+          <option value="PAYMENT" selected>PAYMENT — Bills</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Fraud Simulation</label>
+        <select id="fraudMode"><option value="none">Disabled</option><option value="occasional" selected>Occasional (~2%)</option><option value="frequent">Frequent (~5%)</option></select>
+        <label style="margin-top:10px">Speed</label>
+        <select id="speed0"><option value="2000">Slow 0.5/s</option><option value="1000" selected>Normal 1/s</option><option value="500">Fast 2/s</option><option value="200">Burst 5/s</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="prog" id="progBox">
+    <div class="phdr2"><span id="progLbl">Starting...</span><span id="progPct">0%</span></div>
+    <div class="pbar"><div class="pfill" id="progFill"></div></div>
+    <div class="plog" id="progLog"></div>
+  </div>
+
+  <button class="btn btn-g btn-full" id="goBtn" onclick="go()">
+    ⚡ Initialize &amp; Launch All Pipelines
+  </button>
+</div>
+</div>
+
+<!-- ═══ PHASE 2 ═══ -->
+<div class="phase" id="ph2">
+  <div class="ph2-top">
+    <div class="ph2-top-left">
+      <div class="cbar">
+        <div class="cgrp"><div class="ldot2" id="liveDot"></div><span id="slbl">IDLE</span></div>
+        <div class="csep"></div>
+        <div class="cgrp">
+          <span class="clbl">SPEED</span>
+          <input type="range" class="ssl" id="speedSl" min="200" max="3000" value="1000" oninput="chSpeed()">
+          <span id="speedLbl" style="font-size:12px;color:var(--text);min-width:48px">1.0/s</span>
+        </div>
+        <div class="cgrp">
+          <span class="clbl">BURST</span>
+          <input type="checkbox" id="burst" style="accent-color:var(--acc);width:15px;height:15px;cursor:pointer" onchange="chSpeed()">
+        </div>
+        <div class="spacer"></div>
+        <div style="text-align:center"><div class="tval" id="tpsVal">0</div><div class="tlbl">TX/MIN</div></div>
+        <div class="csep"></div>
+        <button class="btn btn-a" id="pauseBtn" onclick="doPause()">⏸ Pause</button>
+        <button class="btn btn-r" id="stopBtn"  onclick="doStop()">⏹ Stop</button>
+      </div>
+      <div class="stats stats-ph2">
+        <div class="sc" id="sc0"><div class="slb">Total TX</div><div class="sv cb" id="v0">0</div><div class="sd" id="d0">session: 0</div></div>
+        <div class="sc" id="sc1"><div class="slb">Volume</div><div class="sv cg" id="v1">$0.00</div><div class="sd">cumulative</div></div>
+        <div class="sc" id="sc2"><div class="slb">Fraud Alerts</div><div class="sv cr" id="v2">0</div><div class="sd">flagged</div></div>
+        <div class="sc" id="sc3"><div class="slb">Avg TX</div><div class="sv ca" id="v3">$0.00</div><div class="sd">per transaction</div></div>
+      </div>
+    </div>
+    <div class="ph2-flow" aria-hidden="true">
+      <div class="ph2-flow-svgwrap">
+        <svg viewBox="0 0 640 216" xmlns="http://www.w3.org/2000/svg" role="img" preserveAspectRatio="none" overflow="visible">
+          <defs>
+            <marker id="cbPh2FlowArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></marker>
+          </defs>
+          <!-- Bands + layer labels (stay anchored on the left) -->
+          <rect x="2" y="2" width="636" height="48" rx="8" fill="#000000" stroke="#14532d" stroke-width="1"></rect>
+          <text x="10" y="18" fill="#6ee7b7" font-size="10" font-weight="800" font-family="system-ui,sans-serif">OLTP</text>
+          <text x="10" y="30" fill="#34d399" font-size="7.5" font-family="system-ui,sans-serif">System of record</text>
+          <rect x="2" y="54" width="636" height="46" rx="8" fill="#000000" stroke="#78350f" stroke-width="1"></rect>
+          <text x="10" y="70" fill="#fcd34d" font-size="10" font-weight="800" font-family="system-ui,sans-serif">CDC</text>
+          <text x="10" y="82" fill="#fbbf24" font-size="7" font-family="system-ui,sans-serif">Decode → event bus</text>
+          <rect x="2" y="104" width="636" height="56" rx="8" fill="#000000" stroke="#1e3a5f" stroke-width="1"></rect>
+          <text x="10" y="120" fill="#7dd3fc" font-size="10" font-weight="800" font-family="system-ui,sans-serif">OLAP</text>
+          <text x="10" y="132" fill="#38bdf8" font-size="7" font-family="system-ui,sans-serif">Columnar + streaming</text>
+          <rect x="2" y="166" width="636" height="48" rx="8" fill="#000000" stroke="#7f1d1d" stroke-width="1"></rect>
+          <text x="10" y="182" fill="#fca5a5" font-size="10" font-weight="800" font-family="system-ui,sans-serif">ML</text>
+          <text x="10" y="194" fill="#f87171" font-size="7.5" font-family="system-ui,sans-serif">Fraud scoring · inference</text>
+
+          <!-- Boxes + connectors, shifted right so they sit centered next to the labels -->
+          <g transform="translate(80,0)">
+          <!-- OLTP -->
+          <rect x="114" y="12" width="72" height="30" rx="6" fill="#000000" stroke="#818cf8" stroke-width="1.2"></rect>
+          <text x="150" y="30" text-anchor="middle" fill="#e0e7ff" font-size="9.5" font-weight="700" font-family="system-ui,sans-serif">Bank App</text>
+          <line x1="186" y1="27" x2="211" y2="27" stroke="#a5b4fc" stroke-width="1.3" marker-end="url(#cbPh2FlowArr)"></line>
+          <rect x="211" y="10" width="82" height="34" rx="6" fill="#000000" stroke="#34d399" stroke-width="1.2"></rect>
+          <text x="252" y="24" text-anchor="middle" fill="#6ee7b7" font-size="10" font-weight="700" font-family="system-ui,sans-serif">EDB PGD</text>
+          <text x="252" y="36" text-anchor="middle" fill="#a7f3d0" font-size="7" font-family="system-ui,sans-serif">WAL · logical decode</text>
+          <path d="M252 44 L252 52 L147 52 L147 58" fill="none" stroke="#94a3b8" stroke-width="1" marker-end="url(#cbPh2FlowArr)"></path>
+
+          <!-- CDC -->
+          <rect x="104" y="62" width="86" height="30" rx="6" fill="#000000" stroke="#fb923c" stroke-width="1.2"></rect>
+          <text x="147" y="80" text-anchor="middle" fill="#fed7aa" font-size="9.5" font-weight="700" font-family="system-ui,sans-serif">Debezium</text>
+          <line x1="190" y1="77" x2="217" y2="77" stroke="#fdba74" stroke-width="1.2" marker-end="url(#cbPh2FlowArr)"></line>
+          <rect x="217" y="62" width="70" height="30" rx="6" fill="#000000" stroke="#fbbf24" stroke-width="1.2"></rect>
+          <text x="252" y="80" text-anchor="middle" fill="#fef08a" font-size="9.5" font-weight="700" font-family="system-ui,sans-serif">Kafka</text>
+          <line x1="252" y1="92" x2="252" y2="106" stroke="#94a3b8" stroke-width="1" marker-end="url(#cbPh2FlowArr)"></line>
+
+          <!-- OLAP -->
+          <rect x="104" y="118" width="92" height="34" rx="6" fill="#000000" stroke="#38bdf8" stroke-width="1.2"></rect>
+          <text x="150" y="132" text-anchor="middle" fill="#bae6fd" font-size="9" font-weight="700" font-family="system-ui,sans-serif">ClickHouse</text>
+          <text x="150" y="144" text-anchor="middle" fill="#7dd3fc" font-size="6.8" font-family="system-ui,sans-serif">Columnar OLAP</text>
+          <rect x="206" y="118" width="92" height="34" rx="6" fill="#000000" stroke="#a78bfa" stroke-width="1.2"></rect>
+          <text x="252" y="132" text-anchor="middle" fill="#ddd6fe" font-size="9" font-weight="700" font-family="system-ui,sans-serif">RisingWave</text>
+          <text x="252" y="144" text-anchor="middle" fill="#c4b5fd" font-size="6.8" font-family="system-ui,sans-serif">Streaming SQL</text>
+          <rect x="308" y="118" width="104" height="34" rx="6" fill="#000000" stroke="#34d399" stroke-width="1.2"></rect>
+          <text x="360" y="132" text-anchor="middle" fill="#a7f3d0" font-size="9" font-weight="700" font-family="system-ui,sans-serif">Stream enrich</text>
+          <text x="360" y="144" text-anchor="middle" fill="#6ee7b7" font-size="6.8" font-family="system-ui,sans-serif">Kafka features path</text>
+          <line x1="252" y1="106" x2="150" y2="118" stroke="#94a3b8" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#cbPh2FlowArr)"></line>
+          <line x1="252" y1="106" x2="252" y2="118" stroke="#94a3b8" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#cbPh2FlowArr)"></line>
+          <line x1="252" y1="106" x2="360" y2="118" stroke="#94a3b8" stroke-width="0.9" stroke-dasharray="3 2" marker-end="url(#cbPh2FlowArr)"></line>
+
+          <!-- ML -->
+          <line x1="150" y1="152" x2="252" y2="166" stroke="#94a3b8" stroke-width="0.85" stroke-dasharray="3 2" marker-end="url(#cbPh2FlowArr)"></line>
+          <line x1="252" y1="152" x2="252" y2="166" stroke="#94a3b8" stroke-width="0.85" stroke-dasharray="3 2" marker-end="url(#cbPh2FlowArr)"></line>
+          <line x1="360" y1="152" x2="252" y2="166" stroke="#94a3b8" stroke-width="0.85" stroke-dasharray="3 2" marker-end="url(#cbPh2FlowArr)"></line>
+          <line x1="252" y1="166" x2="252" y2="176" stroke="#94a3b8" stroke-width="1" marker-end="url(#cbPh2FlowArr)"></line>
+          <rect x="212" y="176" width="80" height="26" rx="6" fill="#000000" stroke="#f87171" stroke-width="1.2"></rect>
+          <text x="252" y="192" text-anchor="middle" fill="#fecaca" font-size="9.5" font-weight="700" font-family="system-ui,sans-serif">XGBoost</text>
+          <text x="268" y="172" fill="#94a3b8" font-size="7.5" font-weight="600" font-family="system-ui,sans-serif">scores →</text>
+          <line x1="292" y1="189" x2="312" y2="189" stroke="#34d399" stroke-width="1.2" marker-end="url(#cbPh2FlowArr)"></line>
+          <rect x="312" y="176" width="58" height="26" rx="6" fill="#000000" stroke="#34d399" stroke-width="1.2"></rect>
+          <text x="341" y="193" text-anchor="middle" fill="#a7f3d0" font-size="9" font-weight="700" font-family="system-ui,sans-serif">PGD</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab on" onclick="openTab('td',this)">📊 OLTP</button>
+    <button class="tab"    onclick="openTab('ts',this)">🔍 Search</button>
+    <button class="tab"    onclick="openTab('tf',this)">🛡 Fraud Detection</button>
+    <button class="tab"    onclick="openTab('ta',this)">📈 Analytics</button>
+    <button class="tab"    onclick="openTab('tc',this)">⚖ Comparison</button>
+    <button class="tab"    onclick="openTab('tk',this)">🔴 Kafka CDC</button>
+    <button class="tab"    onclick="openTab('tfa',this)">🤖 Fraud Audit</button>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div class="tpanel on" id="td">
+    <div class="dbody">
+      <div class="dleft">
+        <div class="panel">
+          <div class="phdr"><div class="ptitle">Transaction Breakdown</div></div>
+          <div class="bkg">
+            <div class="bki"><div class="bkl">Credits</div><div class="bkv cg" id="bk0">0</div></div>
+            <div class="bki"><div class="bkl">Debits</div><div class="bkv cr" id="bk1">0</div></div>
+            <div class="bki"><div class="bkl">Transfers</div><div class="bkv cb" id="bk2">0</div></div>
+            <div class="bki"><div class="bkl">Payments</div><div class="bkv ca" id="bk3">0</div></div>
+          </div>
+          <div style="padding:14px"><canvas id="barC" height="65"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="phdr">
+            <div class="ptitle"><div class="ldot2" id="feedDot"></div>Live Transaction Feed</div>
+            <span style="font-size:12px;color:var(--muted)" id="feedN">0 tx</span>
+          </div>
+          <div class="txhdr"><span>TYPE</span><span>CUSTOMER</span><span>DESCRIPTION</span><span style="text-align:right">AMOUNT</span><span style="text-align:right">TIME</span></div>
+          <div class="txlist" id="txFeed"></div>
+        </div>
+      </div>
+      <div class="dright">
+        <div class="panel">
+          <div class="phdr"><div class="ptitle">Volume Over Time</div></div>
+          <div style="padding:12px"><canvas id="lineC" height="140"></canvas></div>
+        </div>
+        <div class="panel" style="flex:1">
+          <div class="phdr"><div class="ptitle">Account Balances</div><span style="font-size:11px;color:var(--muted)" id="acN"></span></div>
+          <div class="aclist" id="acList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SEARCH ── -->
+  <div class="tpanel" id="ts">
+    <div class="panel"><div class="search-wrap">
+      <div class="ptitle" style="font-size:14px;margin-bottom:18px">🔍 Transaction Search (PostgreSQL)</div>
+      <div class="sbar">
+        <div class="siw"><span class="sico">🔍</span><input type="text" id="sq" placeholder='Search merchant, remarks... e.g. "Walmart" or "fraud"' onkeydown="if(event.key==='Enter')doSearch()"></div>
+        <button class="btn btn-g" onclick="doSearch()">Search</button>
+        <button class="btn btn-gh btn-sm" onclick="clearSearch()">Clear</button>
+      </div>
+      <div class="sfilt">
+        <div class="fg"><label>Type</label><select id="ft"><option value="">All</option><option>CREDIT</option><option>DEBIT</option><option>TRANSFER</option><option>PAYMENT</option></select></div>
+        <div class="fg"><label>Category</label><select id="fc"><option value="">All</option><option>Groceries</option><option>Gas &amp; Auto</option><option>Retail Shopping</option><option>Dining</option><option>Utilities</option><option>Payroll</option><option>Loan Payment</option><option>Person-to-Person</option></select></div>
+        <div class="fg"><label>Fraud</label><select id="ff"><option value="">All</option><option value="true">Fraud Only</option><option value="false">Clean Only</option></select></div>
+        <div class="fg"><label>Min $</label><input type="number" id="fa" placeholder="0"></div>
+        <div class="fg"><label>Max $</label><input type="number" id="fb" placeholder="any"></div>
+        <div class="fg"><label>Limit</label><select id="fl"><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option><option value="200">200</option></select></div>
+      </div>
+      <div class="sbadge" id="sbadge" style="display:none;font-size:12px;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:10px">
+        <span id="scount"></span>
+      </div>
+      <div id="sres"><div class="empty"><div class="eico">🔍</div><div>Search transactions in PostgreSQL</div></div></div>
+    </div></div>
+  </div>
+
+  <!-- ── FRAUD DETECTION ── -->
+  <div class="tpanel" id="tf">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:4px">
+          🛡 Fraud Detection — Multi-Layer Approach
+        </div>
+        <div style="font-size:13px;color:var(--muted)">
+          TTDF (Time To Detect Fraud) performance across all detection layers
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span id="syncStatus" style="font-size:11px;color:var(--muted)"></span>
+        <button class="btn btn-p btn-sm" onclick="syncNow()">⚡ Sync Now</button>
+        <a href="http://localhost:8889/?token=databox" target="_blank" class="btn btn-gh btn-sm" style="text-decoration:none">📓 Jupyter</a>
+      </div>
+    </div>
+
+    <!-- 4-column grid: Rules (existing), then 3 ML layers (new) -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px">
+      <!-- 1. Rules-Based (Existing Foundation) -->
+      <div class="comp-card" style="border-color:rgba(239,68,68,.4)">
+        <div class="comp-header">
+          <div class="ldot2" id="fdRulesDot"></div>
+          <span style="color:var(--red)">Rules-Based</span>
+          <span class="ptag" style="background:rgba(239,68,68,.1);color:var(--red);border-color:rgba(239,68,68,.3)">Foundation</span>
+        </div>
+        <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" id="fdRulesStatus">—</span></div>
+        <div class="kv-row"><span class="kv-key">Total Predictions</span><span class="kv-val" id="fdRulesTotal">—</span></div>
+        <div class="kv-row"><span class="kv-key">Fraud Detected</span><span class="kv-val cr" id="fdRulesFraud">—</span></div>
+        <div class="kv-row"><span class="kv-key">Avg TTDF</span><span class="kv-val cg" id="fdRulesTtdf">—</span></div>
+        <div class="kv-row"><span class="kv-key">Rules Active</span><span class="kv-val" id="fdRulesActive">6</span></div>
+        <div style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.6">
+          <b>Existing:</b> Transaction-time rule engine with threshold-based detection
+        </div>
+      </div>
+
+      <!-- 2. Kafka ML (New - Event-Driven) -->
+      <div class="comp-card" style="border-color:rgba(34,197,94,.4)">
+        <div class="comp-header">
+          <div class="ldot2" id="fdKafkaDot"></div>
+          <span style="color:var(--green)">Kafka ML</span>
+          <span class="ptag" style="background:rgba(34,197,94,.1);color:var(--green);border-color:rgba(34,197,94,.3)">NEW · Event-Driven</span>
+          <label class="toggle-sw" title="Start/Stop Kafka ML"><input type="checkbox" id="toggleKafka" onchange="toggleInference('kafka',this.checked)"><span class="toggle-sl"></span></label>
+        </div>
+        <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" id="fdKafkaStatus">—</span></div>
+        <div class="kv-row"><span class="kv-key">Total Predictions</span><span class="kv-val" id="fdKafkaTotal">—</span></div>
+        <div class="kv-row"><span class="kv-key">Fraud Detected</span><span class="kv-val cr" id="fdKafkaFraud">—</span></div>
+        <div class="kv-row"><span class="kv-key">Avg TTDF</span><span class="kv-val cg" id="fdKafkaTtdf">—</span></div>
+        <div class="kv-row"><span class="kv-key">P95 TTDF</span><span class="kv-val" id="fdKafkaP95">—</span></div>
+        <div style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.6">
+          <b>New:</b> Real-time Kafka stream processing with pre-computed features (~100ms)
+        </div>
+      </div>
+
+      <!-- 3. ClickHouse ML (New - Batch) -->
+      <div class="comp-card" style="border-color:rgba(14,165,233,.4)">
+        <div class="comp-header">
+          <div class="ldot2" id="fdChDot"></div>
+          <span style="color:var(--blue)">ClickHouse ML</span>
+          <span class="ptag ptag-ch">NEW · Batch</span>
+          <label class="toggle-sw" title="Start/Stop ClickHouse ML"><input type="checkbox" id="toggleClickhouse" onchange="toggleInference('clickhouse',this.checked)"><span class="toggle-sl"></span></label>
+        </div>
+        <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" id="fdChStatus">—</span></div>
+        <div class="kv-row"><span class="kv-key">Total Predictions</span><span class="kv-val" id="fdChTotal">—</span></div>
+        <div class="kv-row"><span class="kv-key">Fraud Detected</span><span class="kv-val cr" id="fdChFraud">—</span></div>
+        <div class="kv-row"><span class="kv-key">Avg TTDF</span><span class="kv-val ca" id="fdChTtdf">—</span></div>
+        <div class="kv-row"><span class="kv-key">P95 TTDF</span><span class="kv-val" id="fdChP95">—</span></div>
+        <div style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.6">
+          <b>New:</b> Batch ML inference with columnar aggregations (~3s)
+        </div>
+      </div>
+
+      <!-- 4. RisingWave ML (New - Streaming) -->
+      <div class="comp-card" style="border-color:rgba(168,85,247,.4)">
+        <div class="comp-header">
+          <div class="ldot2" id="fdRwDot"></div>
+          <span style="color:var(--purple)">RisingWave ML</span>
+          <span class="ptag ptag-rw">NEW · Streaming</span>
+          <label class="toggle-sw" title="Start/Stop RisingWave ML"><input type="checkbox" id="toggleRisingwave" onchange="toggleInference('risingwave',this.checked)"><span class="toggle-sl"></span></label>
+        </div>
+        <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" id="fdRwStatus">—</span></div>
+        <div class="kv-row"><span class="kv-key">Total Predictions</span><span class="kv-val" id="fdRwTotal">—</span></div>
+        <div class="kv-row"><span class="kv-key">Fraud Detected</span><span class="kv-val cr" id="fdRwFraud">—</span></div>
+        <div class="kv-row"><span class="kv-key">Avg TTDF</span><span class="kv-val cp" id="fdRwTtdf">—</span></div>
+        <div class="kv-row"><span class="kv-key">P95 TTDF</span><span class="kv-val" id="fdRwP95">—</span></div>
+        <div style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.6">
+          <b>New:</b> Streaming SQL with incremental materialized views (~4s)
+        </div>
+      </div>
+
+      <!-- 5. PGAA ML (Iceberg) -->
+      <div class="comp-card" style="border-color:rgba(251,191,36,.4)">
+        <div class="comp-header">
+          <div class="ldot2" id="fdPgaaDot"></div>
+          <span style="color:#fbbf24">PGAA</span>
+          <span class="ptag" style="background:rgba(251,191,36,.1);color:#fbbf24;border-color:rgba(251,191,36,.3)">Iceberg</span>
+          <label class="toggle-sw" title="Start/Stop PGAA"><input type="checkbox" id="togglePgaa" onchange="toggleInference('pgaa',this.checked)"><span class="toggle-sl"></span></label>
+        </div>
+        <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" id="fdPgaaStatus">—</span></div>
+        <div class="kv-row"><span class="kv-key">Total Predictions</span><span class="kv-val" id="fdPgaaTotal">—</span></div>
+        <div class="kv-row"><span class="kv-key">Fraud Detected</span><span class="kv-val cr" id="fdPgaaFraud">—</span></div>
+        <div class="kv-row"><span class="kv-key">Avg TTDF</span><span class="kv-val" style="color:#fbbf24" id="fdPgaaTtdf">—</span></div>
+        <div class="kv-row"><span class="kv-key">P95 TTDF</span><span class="kv-val" id="fdPgaaP95">—</span></div>
+        <div style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.6">
+          <b>Iceberg:</b> All queries via Seafowl — zero OLTP impact
+        </div>
+      </div>
+
+    </div>
+
+    <!-- OLTP Performance Metrics -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="phdr">
+        <div class="ptitle">🗄️ OLTP Health — Transaction Commit Performance</div>
+        <span style="font-size:11px;color:var(--muted)">Real-time PostgreSQL metrics</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:14px">
+        <div style="text-align:center;padding:10px;background:var(--s2);border-radius:8px">
+          <div style="font-size:28px;font-weight:700" id="oltpInsertLatency">—</div>
+          <div style="font-size:11px;color:var(--muted)">INSERT Latency</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">Transaction commit time</div>
+        </div>
+        <div style="text-align:center;padding:10px;background:var(--s2);border-radius:8px">
+          <div style="font-size:28px;font-weight:700" id="oltpPendingInserts">—</div>
+          <div style="font-size:11px;color:var(--muted)">Pending INSERTs</div>
+          <div style="font-size:9px;color:var(--muted);margin-top:2px">Backlog indicator</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:0 14px 14px">
+        <div style="text-align:center">
+          <div style="font-size:18px;font-weight:600" id="oltpTps">—</div>
+          <div style="font-size:10px;color:var(--muted)">TPS</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:18px;font-weight:600" id="oltpActiveConn">—</div>
+          <div style="font-size:10px;color:var(--muted)">Active Queries</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:18px;font-weight:600" id="oltpCacheHit">—</div>
+          <div style="font-size:10px;color:var(--muted)">Cache Hit %</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:18px;font-weight:600" id="oltpLockWait">—</div>
+          <div style="font-size:10px;color:var(--muted)">Lock Waits</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:18px;font-weight:600" id="oltpRecentTx">—</div>
+          <div style="font-size:10px;color:var(--muted)">TX/min</div>
+        </div>
+      </div>
+      <div style="padding:0 14px 14px;font-size:10px;color:var(--muted)">
+        <b>Impact:</b> If INSERT latency increases under load, ML queries may be blocking OLTP. PGAA = zero OLTP impact (all queries via Iceberg)
+      </div>
+    </div>
+
+    <!-- TTDF Comparison Chart -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="phdr">
+        <div class="ptitle">📊 ML Pipeline Performance — TTDF vs OLTP Impact</div>
+        <span style="font-size:11px;color:var(--muted)">Time to Fraud Detection by technology · OLTP insert latency on right axis</span>
+      </div>
+      <div style="padding:14px"><canvas id="fdTtdfChart" height="140"></canvas></div>
+      <div style="padding:0 14px 10px;display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted)">
+        <span>🟢 Kafka: Direct from OLTP</span>
+        <span>🔵 ClickHouse: Debezium→Kafka→CH</span>
+        <span>🟣 RisingWave: Debezium→Kafka→RW</span>
+        <span>🟡 PGAA: WAL→Iceberg→Seafowl</span>
+        <span>⚪ OLTP Latency: Insert commit time</span>
+      </div>
+    </div>
+
+    <!-- Unified Detection Results: Alerts + Predictions -->
+    <div class="panel">
+      <div class="phdr">
+        <div class="ptitle">🔍 Detection Results — All Layers</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="fdUnifiedFilter" onchange="loadFraudUnified()" style="background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--text);font-family:'JetBrains Mono',monospace">
+            <option value="all_fraud">All Fraud (Alerts + Predictions)</option>
+            <option value="alerts">Alerts Only (High-Severity)</option>
+            <option value="high_confidence">High Confidence (>0.8)</option>
+            <option value="all_predictions">All Predictions</option>
+            <option value="disagreements">ML vs Rules Disagreements</option>
+            <option value="kafka">Kafka Source</option>
+            <option value="clickhouse">ClickHouse Source</option>
+            <option value="risingwave">RisingWave Source</option>
+            <option value="pgaa">PGAA</option>
+            <option value="rules">Rules-Based Only</option>
+          </select>
+          <span style="font-size:11px;color:var(--muted)" id="fdUnifiedCount">Last 50</span>
+        </div>
+      </div>
+      <div style="max-height:400px;overflow-y:auto">
+        <table class="ftable">
+          <thead>
+            <tr>
+              <th>TX ID</th>
+              <th>Source</th>
+              <th>Customer</th>
+              <th>Merchant</th>
+              <th style="text-align:right">Amount</th>
+              <th style="text-align:right">ML Score</th>
+              <th>Result</th>
+              <th>Rules</th>
+              <th style="text-align:center">Match</th>
+              <th style="text-align:right">TTDF</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="fdUnifiedBody">
+            <tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)">
+              <div class="eico" style="font-size:24px">⏳</div>
+              Loading detection results...
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── ANALYTICS ── -->
+  <div class="tpanel" id="ta">
+    <!-- Status bar -->
+    <div class="abar">
+      <div class="aitem"><div class="ldot2" id="chDot"></div><span id="chTxt" style="font-weight:700">ClickHouse: Connecting...</span></div>
+      <div style="color:var(--bd)">|</div>
+      <span id="replTxt" style="color:var(--muted)">Replication: initializing</span>
+      <div style="color:var(--bd)">|</div>
+      <div class="aitem">
+        <span style="color:var(--muted)">Postgres:</span>
+        <span id="pgRowsTxt" style="font-weight:700;color:var(--text)">—</span>
+        <span style="color:var(--muted)">rows</span>
+      </div>
+      <div class="aitem">
+        <span style="color:var(--muted)">ClickHouse:</span>
+        <span id="chRowsTxt" style="font-weight:700;color:var(--acc)">—</span>
+        <span style="color:var(--muted)">rows</span>
+      </div>
+      <div class="aitem">
+        <span style="color:var(--muted)">Lag:</span>
+        <span id="lagTxt" style="font-weight:700;color:var(--amber)">—</span>
+      </div>
+      <div style="flex:1"></div>
+      <button class="btn btn-gh btn-sm" onclick="loadAnalytics()" style="cursor:pointer">↻ Refresh</button>
+    </div>
+
+    <!-- Summary cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+      <div class="sc"><div class="slb">Total TX <span class="ptag ptag-mv">MV</span></div><div class="sv cb" id="an0">—</div><div class="sd">ClickHouse MaterializedPostgreSQL</div></div>
+      <div class="sc"><div class="slb">Total Volume <span class="ptag ptag-ch">CH</span></div><div class="sv cg" id="an1">—</div><div class="sd">all time</div></div>
+      <div class="sc"><div class="slb">Avg Transaction</div><div class="sv ca" id="an2">—</div><div class="sd">per transaction</div></div>
+      <div class="sc"><div class="slb">Fraud Rate <span class="ptag ptag-mv">MV</span></div><div class="sv cr" id="an3">—</div><div class="sd">of all transactions</div></div>
+    </div>
+
+    <!-- Row 1: Volume by hour + Type donut -->
+    <div style="display:grid;grid-template-columns:1fr 360px;gap:14px;margin-bottom:14px">
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">📊 Volume by Hour — Last 48h <span class="ptag ptag-mv">mv_hourly_volume</span></div></div>
+        <div style="padding:14px"><canvas id="anVol" height="130"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">🍩 By Type <span class="ptag ptag-mv">mv_by_type</span></div></div>
+        <div style="padding:14px"><canvas id="anType" height="130"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 2: Velocity + Fraud trend -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">⚡ TX Velocity — Last 60min <span class="ptag ptag-ch">live</span></div></div>
+        <div style="padding:14px"><canvas id="anVelo" height="110"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">⚠ Fraud Rate Trend <span class="ptag ptag-mv">mv_fraud_trend</span></div></div>
+        <div style="padding:14px"><canvas id="anFraud" height="110"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 3: Merchants + Category + Channel -->
+    <div style="display:grid;grid-template-columns:1fr 280px 280px;gap:14px;margin-bottom:14px">
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">🏪 Top Merchants <span class="ptag ptag-mv">mv_by_merchant</span></div></div>
+        <div style="overflow-x:auto">
+          <table class="stable">
+            <thead><tr><th>Merchant</th><th style="text-align:right">TX</th><th style="text-align:right">Volume</th><th style="text-align:right">Fraud</th></tr></thead>
+            <tbody id="anMerch"><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">📂 By Category <span class="ptag ptag-mv">MV</span></div></div>
+        <div style="padding:12px"><canvas id="anCat" height="180"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">📱 By Channel <span class="ptag ptag-mv">MV</span></div></div>
+        <div style="padding:12px"><canvas id="anChan" height="180"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 4: Top Customers -->
+    <div class="panel">
+      <div class="phdr"><div class="ptitle">👤 Top Customers <span class="ptag ptag-ch">live join on pg_cdc</span></div></div>
+      <div style="overflow-x:auto">
+        <table class="stable">
+          <thead><tr><th>Customer</th><th>ID</th><th style="text-align:right">TX Count</th><th style="text-align:right">Volume</th><th style="text-align:right">Fraud TX</th></tr></thead>
+          <tbody id="anCust"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted)">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COMPARISON ── -->
+  <div class="tpanel" id="tc">
+    <div style="margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:6px">
+        ⚖ Analytics Engine Comparison
+      </div>
+      <div style="font-size:13px;color:var(--muted)">
+        Real-time performance metrics: RisingWave Materialized Views vs ClickHouse MaterializedPostgreSQL
+      </div>
+    </div>
+
+    <!-- Status + lag row -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px">
+      <div class="metric-box">
+        <div class="metric-lbl">PostgreSQL (Source)</div>
+        <div class="metric-val cg" id="cpPgRows">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">rows (truth)</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-lbl">ClickHouse lag</div>
+        <div class="metric-val ca" id="cpChLag">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">rows behind Postgres</div>
+      </div>
+      <div class="metric-box">
+        <div class="metric-lbl">RisingWave lag</div>
+        <div class="metric-val cp" id="cpRwLag">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">rows behind Postgres</div>
+      </div>
+    </div>
+
+    <div class="comp-grid">
+      <!-- RisingWave side -->
+      <div>
+        <div class="comp-card" style="border-color:rgba(168,85,247,.4)">
+          <div class="comp-header"><div class="ldot2" id="rwDot"></div><span style="color:var(--purple)">RisingWave</span><span class="ptag ptag-rw">Materialized Views</span></div>
+          <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" id="cpRwStatus">—</span></div>
+          <div class="kv-row"><span class="kv-key">TX in RW</span><span class="kv-val" id="cpRwRows">—</span></div>
+          <div class="kv-row"><span class="kv-key">Total Rows</span><span class="kv-val" id="cpRwMvRows">—</span></div>
+          <div class="kv-row"><span class="kv-key">MV Count</span><span class="kv-val">8 active</span></div>
+          <div class="kv-row"><span class="kv-key">Type</span><span class="kv-val">Streaming SQL</span></div>
+          <div style="margin-top:14px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Replication completeness</div>
+            <div class="lag-bar"><div class="lag-fill" id="rwLagBar" style="background:var(--purple)"></div></div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <div class="phdr"><div class="ptitle" style="color:var(--purple)">RW: Breakdown by Type <span class="ptag ptag-rw">mv_type_breakdown</span></div></div>
+          <div style="padding:12px"><canvas id="cpRwType" height="120"></canvas></div>
+        </div>
+      </div>
+
+      <!-- ClickHouse side -->
+      <div>
+        <div class="comp-card" style="border-color:rgba(14,165,233,.4)">
+          <div class="comp-header"><div class="ldot2" id="chDot2"></div><span style="color:var(--blue)">ClickHouse</span><span class="ptag ptag-ch">MaterializedPostgreSQL</span></div>
+          <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" id="cpChStatus">—</span></div>
+          <div class="kv-row"><span class="kv-key">TX in CH</span><span class="kv-val" id="cpChRows">—</span></div>
+          <div class="kv-row"><span class="kv-key">Total Rows</span><span class="kv-val" id="cpChMvRows">—</span></div>
+          <div class="kv-row"><span class="kv-key">Table Count</span><span class="kv-val">6 active</span></div>
+          <div class="kv-row"><span class="kv-key">Type</span><span class="kv-val">Native CDC Engine</span></div>
+          <div style="margin-top:14px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Replication completeness</div>
+            <div class="lag-bar"><div class="lag-fill" id="chLagBar" style="background:var(--blue)"></div></div>
+          </div>
+        </div>
+        <div class="panel" style="margin-top:12px">
+          <div class="phdr"><div class="ptitle" style="color:var(--blue)">CH: Breakdown by Type <span class="ptag ptag-mv">mv_by_type</span></div></div>
+          <div style="padding:12px"><canvas id="cpChType" height="120"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-minute comparison chart -->
+    <div class="panel" style="margin-top:14px">
+      <div class="phdr"><div class="ptitle">📈 TX per Minute — RisingWave MV vs ClickHouse live</div></div>
+      <div style="padding:14px"><canvas id="cpCompare" height="100"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── KAFKA CDC ── -->
+  <div class="tpanel" id="tk">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin-bottom:4px">🔴 Apache Kafka CDC Dashboard</div>
+        <div style="font-size:13px;color:var(--muted)">Debezium connector streaming EDB Postgres → Kafka topics</div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-gh btn-sm" onclick="loadKafka()">↻ Refresh</button>
+        <button class="btn btn-a btn-sm" onclick="restartKafka()">⟳ Restart Connector</button>
+      </div>
+    </div>
+
+    <!-- Kafka metric cards -->
+    <div class="kafka-grid">
+      <div class="kcard">
+        <div class="kcard-title">Connector Status</div>
+        <div id="kafkaConnStatus"><span class="kstatus unknown">CHECKING...</span></div>
+      </div>
+      <div class="kcard">
+        <div class="kcard-title">Task Status</div>
+        <div id="kafkaTaskStatus"><span class="kstatus unknown">CHECKING...</span></div>
+      </div>
+      <div class="kcard">
+        <div class="kcard-title">Total Rows Produced</div>
+        <div class="kcard-val cg" id="kafkaTotalProduced">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">simulator transactions</div>
+      </div>
+    </div>
+    <div class="kafka-grid" style="margin-top:0">
+      <div class="kcard">
+        <div class="kcard-title">Fraud Events Produced</div>
+        <div class="kcard-val cr" id="kafkaFraudProduced">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">fraud tx in stream</div>
+      </div>
+      <div class="kcard">
+        <div class="kcard-title">Sim Throughput</div>
+        <div class="kcard-val ca" id="kafkaSimRate">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">current rate</div>
+      </div>
+      <div class="kcard">
+        <div class="kcard-title">Connector Type</div>
+        <div class="kcard-val" style="font-size:13px;color:var(--orange)">Debezium PostgreSQL</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">pgoutput · JSON unwrapped</div>
+      </div>
+    </div>
+    <div id="kafkaTaskError" style="display:none;background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--red);margin-bottom:12px;line-height:1.6"></div>
+
+    <!-- Pipeline diagram -->
+    <div class="panel" style="margin-bottom:14px">
+      <div class="phdr"><div class="ptitle">🔄 Pipeline Architecture</div></div>
+      <div style="padding:20px;text-align:center">
+        <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;gap:4px">
+          <!-- EDB Postgres -->
+          <div style="background:var(--s2);border:1px solid rgba(0,255,136,.4);border-radius:10px;padding:14px 18px;text-align:center;min-width:130px">
+            <div style="font-size:22px;margin-bottom:6px">🐘</div>
+            <div style="font-weight:700;font-size:13px;color:var(--acc)">EDB PostgreSQL</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">WAL logical replication</div>
+            <div style="font-size:10px;color:var(--muted)">3 tables</div>
+            <div id="pipePgRows" style="font-size:12px;color:var(--acc);font-weight:700;margin-top:4px">— rows</div>
+          </div>
+          <div style="font-size:20px;color:var(--acc);padding:0 6px">──►</div>
+          <!-- Debezium -->
+          <div style="background:var(--s2);border:1px solid rgba(249,115,22,.4);border-radius:10px;padding:14px 18px;text-align:center;min-width:130px">
+            <div style="font-size:22px;margin-bottom:6px">🔗</div>
+            <div style="font-weight:700;font-size:13px;color:var(--orange)">Debezium Connect</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">PostgreSQL Connector</div>
+            <div style="font-size:10px;color:var(--muted)">pgoutput plugin</div>
+            <div id="pipeDebeziumStatus" style="font-size:11px;font-weight:700;margin-top:4px;color:var(--muted)">—</div>
+          </div>
+          <div style="font-size:20px;color:var(--orange);padding:0 6px">──►</div>
+          <!-- Kafka -->
+          <div style="background:var(--s2);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:14px 18px;text-align:center;min-width:140px">
+            <div style="font-size:22px;margin-bottom:6px">📨</div>
+            <div style="font-weight:700;font-size:13px;color:var(--red)">Apache Kafka</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">3 topics streaming</div>
+            <div style="font-size:10px;color:var(--muted)">.customers / .accounts</div>
+            <div style="font-size:10px;color:var(--muted)">.transactions</div>
+            <div id="pipeKafkaStatus" style="font-size:11px;font-weight:700;margin-top:4px;color:var(--muted)">—</div>
+          </div>
+          <div style="font-size:20px;color:var(--red);padding:0 6px">──►</div>
+          <!-- ClickHouse -->
+          <div style="background:var(--s2);border:2px solid rgba(14,165,233,.6);border-radius:10px;padding:14px 18px;text-align:center;min-width:140px;box-shadow:0 0 16px rgba(14,165,233,.2)">
+            <div style="font-size:22px;margin-bottom:6px">🏛</div>
+            <div style="font-weight:700;font-size:13px;color:var(--blue)">ClickHouse</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">Kafka Engine consumer</div>
+            <div style="font-size:10px;color:var(--muted)">2 consumer groups</div>
+            <div id="pipeChRows" style="font-size:12px;color:var(--blue);font-weight:700;margin-top:4px">— rows</div>
+          </div>
+          <div style="font-size:20px;color:var(--blue);padding:0 6px">──►</div>
+          <!-- Downstream -->
+          <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px 18px;text-align:center;min-width:120px">
+            <div style="font-size:18px;margin-bottom:4px">🚀</div>
+            <div style="font-weight:700;font-size:11px;color:var(--muted)">Downstream Apps</div>
+            <div style="font-size:10px;color:var(--muted);line-height:1.9;margin-top:4px">
+              AI / ML Models<br>Notification Svc<br>Data Warehouse<br>Analytics KSQL
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Topics + Connector config -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="panel">
+        <div class="phdr">
+          <div class="ptitle">📋 Kafka Topics — Per-Topic Metrics</div>
+          <span style="font-size:11px;color:var(--muted)">auto-refreshes every 10s</span>
+        </div>
+        <div style="padding:14px">
+          <table class="stable">
+            <thead>
+              <tr>
+                <th>Kafka Topic</th>
+                <th style="text-align:center">Connector</th>
+                <th style="text-align:right">Rows in Postgres</th>
+                <th style="text-align:right">Rows in ClickHouse</th>
+                <th style="text-align:right">Lag (rows)</th>
+                <th style="text-align:center">Stream</th>
+              </tr>
+            </thead>
+            <tbody id="kafkaTopicTable">
+              <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted)">
+                <div class="eico" style="font-size:24px">⏳</div>
+                Click Initialize to activate pipeline.
+              </td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:10px;display:flex;gap:16px;font-size:11px;color:var(--muted)">
+            <span>📊 <b style="color:var(--acc)">ClickHouse total:</b> <span id="pipeChAnalytics">—</span> rows</span>
+            <span style="color:var(--muted)">(Debezium CDC → Kafka → ClickHouse Kafka Engine → ReplacingMergeTree)</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">⚙ Connector Configuration</div></div>
+        <div style="padding:14px" id="kafkaConfig">
+          <div class="kv-row"><span class="kv-key">Connector class</span><span class="kv-val" style="font-size:11px">debezium.connector.postgresql</span></div>
+          <div class="kv-row"><span class="kv-key">Plugin</span><span class="kv-val">pgoutput</span></div>
+          <div class="kv-row"><span class="kv-key">Publication</span><span class="kv-val">rw_pub_corebanking</span></div>
+          <div class="kv-row"><span class="kv-key">Slot name</span><span class="kv-val">kafka_slot_corebanking</span></div>
+          <div class="kv-row"><span class="kv-key">Tables</span><span class="kv-val" style="font-size:11px">customers, accounts, transactions</span></div>
+          <div class="kv-row"><span class="kv-key">Format</span><span class="kv-val">JSON (unwrapped)</span></div>
+          <div class="kv-row"><span class="kv-key">Decimals</span><span class="kv-val">double mode</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FRAUD AUDIT ── -->
+  <div class="tpanel" id="tfa">
+    <div class="agrid" style="grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+      <!-- HITL Stats -->
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">🔄 HITL Queue</div></div>
+        <div class="kvbox">
+          <div class="kv-row"><span class="kv-key">Pending</span><span class="kv-val ca" id="hitlPending">—</span></div>
+          <div class="kv-row"><span class="kv-key">Approved (24h)</span><span class="kv-val cg" id="hitlApproved">—</span></div>
+          <div class="kv-row"><span class="kv-key">Rejected (24h)</span><span class="kv-val cr" id="hitlRejected">—</span></div>
+          <div class="kv-row"><span class="kv-key">Escalated</span><span class="kv-val cp" id="hitlEscalated">—</span></div>
+        </div>
+      </div>
+
+      <!-- LangFlow Status -->
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">🤖 LangFlow Agent</div></div>
+        <div class="kvbox">
+          <div class="kv-row"><span class="kv-key">Status</span><span class="kv-val" id="langflowStatus">—</span></div>
+          <div class="kv-row"><span class="kv-key">Port</span><span class="kv-val">7861</span></div>
+        </div>
+        <div style="padding: 12px;">
+          <a href="http://localhost:7861" target="_blank" class="btn btn-p btn-sm" style="width: 100%; text-decoration: none;">Open LangFlow Agent Builder</a>
+        </div>
+      </div>
+
+      <!-- Fraud Rules Summary -->
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">📋 Fraud Rules</div></div>
+        <div class="kvbox">
+          <div class="kv-row"><span class="kv-key">Total Rules</span><span class="kv-val" id="rulesTotal">15</span></div>
+          <div class="kv-row"><span class="kv-key">Regions</span><span class="kv-val">US, UK, CA, DE, FR, GLOBAL</span></div>
+          <div class="kv-row"><span class="kv-key">Vendors</span><span class="kv-val">Stripe, PayPal, Square</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HITL Approval Queue -->
+    <div class="panel" style="margin-bottom: 20px;">
+      <div class="phdr">
+        <div class="ptitle">⏳ Pending HITL Approvals</div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-gh btn-sm" onclick="loadHitlQueue()">Refresh</button>
+        </div>
+      </div>
+      <div style="padding: 14px; max-height: 300px; overflow-y: auto;">
+        <table class="ftable">
+          <thead>
+            <tr>
+              <th>TX ID</th>
+              <th>Amount</th>
+              <th>Customer</th>
+              <th>Merchant</th>
+              <th>ML Score</th>
+              <th>Source</th>
+              <th>Alert Type</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="hitlTable">
+            <tr><td colspan="8" style="text-align:center;color:var(--muted)">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Fraud Rules Reference -->
+    <div class="agrid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+      <div class="panel">
+        <div class="phdr">
+          <div class="ptitle">📜 Fraud Detection Rules</div>
+          <select id="ruleRegionFilter" onchange="loadFraudRules()" style="background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--text);">
+            <option value="">All Regions</option>
+            <option value="US">US</option>
+            <option value="UK">UK</option>
+            <option value="CA">Canada</option>
+            <option value="DE">Germany</option>
+            <option value="FR">France</option>
+            <option value="GLOBAL">Global</option>
+          </select>
+        </div>
+        <div style="padding: 14px; max-height: 400px; overflow-y: auto;">
+          <table class="stable">
+            <thead><tr><th>Rule ID</th><th>Name</th><th>Region</th><th>Vendor</th><th>Action</th></tr></thead>
+            <tbody id="rulesTable">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted)">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="phdr"><div class="ptitle">📊 Audit Summary (24h)</div></div>
+        <div style="padding: 14px; max-height: 400px; overflow-y: auto;">
+          <table class="stable">
+            <thead><tr><th>Hour</th><th>Source</th><th>Predictions</th><th>Fraud</th><th>HITL Created</th></tr></thead>
+            <tbody id="auditSummaryTable">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted)">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ML FRAUD DETECTION ── -->
+
+</div><!-- /ph2 -->
+</div><!-- /main -->
+
+<!-- STATUS BAR -->
+<div class="status">
+  <div style="display:flex;align-items:center;gap:6px"><div class="sdot" id="dbDot"></div><span id="dbTxt">DB: Not Connected</span></div>
+  <div style="display:flex;align-items:center;gap:6px"><div class="sdot" id="simDot"></div><span id="simTxt">Sim: Idle</span></div>
+  <div style="display:flex;align-items:center;gap:6px"><div class="sdot" id="ch2Dot"></div><span id="ch2Txt">CH: —</span></div>
+  <div style="display:flex;align-items:center;gap:6px"><div class="sdot" id="kafkaDot"></div><span id="kafkaTxt">Kafka: —</span></div>
+  <div class="spacer"></div>
+  <span id="sbC">Customers: —</span><span style="color:var(--bd)">|</span>
+  <span id="sbA">Accounts: —</span><span style="color:var(--bd)">|</span>
+  <span id="sbT">TX: —</span><span style="color:var(--bd)">|</span>
+  <span style="color:var(--acc)" id="sesT">00:00</span>
+</div>
+<div id="toast"></div>
+
+<!-- Enhanced Fraud Alert Notification -->
+<div id="fraudAlertBox" class="fraud-alert-box">
+  <div class="fraud-alert-header">
+    <div class="fraud-alert-icon">🚨</div>
+    <div class="fraud-alert-title">
+      <h3 id="fraudAlertTitle">Fraud Alert Detected</h3>
+      <p id="fraudAlertSubtitle">High-risk transaction flagged</p>
+    </div>
+    <button class="fraud-alert-close" onclick="closeFraudAlert()">×</button>
+  </div>
+  <div class="fraud-alert-body" id="fraudAlertContent">
+    <!-- Dynamic content -->
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+//  EDB Postgres AI Core Banking Simulator — Frontend v9.0
+// ══════════════════════════════════════════════════════════
+
+const _h  = window.location.hostname;
+const _pr = window.location.protocol;
+const API = `${_pr}//${_h}:3001`;
+const WSU = `${_pr === 'https:' ? 'wss' : 'ws'}://${_h}:3001`;
+
+let ws=null,lineChart=null,barChart=null;
+let anCharts={},cpCharts={};
+let sesTmr=null,sesSec=0,feedN=0,sesTxN=0;
+let _anTab=false,_cpTab=false,_kTab=false,_mlTab=false,_fdTab=false;
+const SIM={running:false,paused:false};
+const DATA={accounts:[],stats:{total:0,volume:0,fraud:0,credit:0,debit:0,transfer:0,payment:0}};
+
+setInterval(()=>{g('clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});},1000);
+
+const g=id=>document.getElementById(id);
+const setDot=(id,running)=>{const dot=g(id);if(dot)dot.className=running?'ldot2 on':'ldot2';};
+const fU=n=>'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fBig=n=>{const v=parseFloat(n)||0;if(v>=1e9)return'$'+(v/1e9).toFixed(2)+'B';if(v>=1e6)return'$'+(v/1e6).toFixed(2)+'M';if(v>=1e3)return'$'+(v/1e3).toFixed(1)+'K';return'$'+v.toFixed(2);};
+const fN=n=>(parseFloat(n)||0).toLocaleString('en-US');
+
+let _tt=null;
+function toast(msg,t='ts'){const e=g('toast');e.textContent=msg;e.className=`show ${t}`;if(_tt)clearTimeout(_tt);_tt=setTimeout(()=>{e.className='';},5000);}
+
+let _bt=null;
+function banner(msg,type){const b=g('banner');b.textContent=msg;b.className=`show ${type}`;if(_bt)clearTimeout(_bt);if(type==='live')_bt=setTimeout(()=>{b.className=type;},3000);}
+
+// ── SIM UI ─────────────────────────────────────────────────
+function uiLive(){SIM.running=true;SIM.paused=false;g('slbl').textContent='● LIVE';g('slbl').style.color='var(--acc)';g('liveDot').className='ldot2 on';g('feedDot').className='ldot2 on';g('simTxt').textContent='Sim: RUNNING';g('simDot').className='sdot g';const pb=g('pauseBtn');pb.textContent='⏸ Pause';pb.className='btn btn-a';pb.removeAttribute('disabled');g('stopBtn').removeAttribute('disabled');banner('▶  Transactions are Live','live');}
+function uiPaused(){SIM.paused=true;g('slbl').textContent='⏸ PAUSED';g('slbl').style.color='var(--amber)';g('liveDot').className='ldot2';g('feedDot').className='ldot2';g('simTxt').textContent='Sim: PAUSED';g('simDot').className='sdot a';const pb=g('pauseBtn');pb.textContent='▶ Resume';pb.className='btn btn-g';pb.removeAttribute('disabled');g('stopBtn').removeAttribute('disabled');banner('⏸  Transactions Paused','paused');}
+function uiResumed(){SIM.paused=false;g('slbl').textContent='● LIVE';g('slbl').style.color='var(--acc)';g('liveDot').className='ldot2 on';g('feedDot').className='ldot2 on';g('simTxt').textContent='Sim: RUNNING';g('simDot').className='sdot g';const pb=g('pauseBtn');pb.textContent='⏸ Pause';pb.className='btn btn-a';pb.removeAttribute('disabled');g('stopBtn').removeAttribute('disabled');banner('▶  Transactions are Live','live');}
+function uiStopped(){SIM.running=false;SIM.paused=false;clearInterval(sesTmr);g('slbl').textContent='⏹ STOPPED';g('slbl').style.color='var(--red)';g('liveDot').className='ldot2';g('feedDot').className='ldot2';g('simTxt').textContent='Sim: STOPPED';g('simDot').className='sdot r';g('pauseBtn').setAttribute('disabled','');g('stopBtn').setAttribute('disabled','');g('tpsVal').textContent='0';banner('⏹  Transactions Stopped','stopped');}
+
+function doPause(){if(!SIM.running){toast('Simulation not running','te');return;}if(!SIM.paused){uiPaused();}else{uiResumed();}fetch(API+'/api/sim/pause',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});}
+function doStop(){if(!SIM.running){toast('Simulation not running','te');return;}uiStopped();toast(`⏹ Stopped — ${DATA.stats.total.toLocaleString('en-US')} tx · ${fU(DATA.stats.volume)}`,'ti');fetch(API+'/api/sim/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});}
+
+// ── TABS ───────────────────────────────────────────────────
+let _faTab=false;
+function openTab(id,btn){
+  document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  g(id).classList.add('on'); btn.classList.add('on');
+  _anTab=(id==='ta');_cpTab=(id==='tc');_kTab=(id==='tk');_fdTab=(id==='tf');_faTab=(id==='tfa');
+  if(_anTab) loadAnalytics();
+  if(_cpTab) loadComparison();
+  if(_kTab)  loadKafka();
+  if(_fdTab) loadFraud();
+  if(_faTab) loadFraudAudit();
+}
+
+// ── FRAUD AUDIT TAB ────────────────────────────────────────
+async function loadFraudAudit(){
+  loadHitlQueue();
+  loadFraudRules();
+  loadAuditSummary();
+  checkLangflowHealth();
+}
+
+async function loadHitlQueue(){
+  try {
+    const r = await fetch(API+'/api/fraud-audit/hitl?status=pending&limit=20');
+    const d = await r.json();
+    const tbody = g('hitlTable');
+    if(!d.ok || !d.approvals || d.approvals.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted)">No pending approvals</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.approvals.map(a => `
+      <tr>
+        <td>${a.tx_id}</td>
+        <td style="color:var(--amber)">${fU(a.transaction_amount)}</td>
+        <td>${a.customer_id}</td>
+        <td>${a.merchant || '—'}</td>
+        <td style="color:var(--red)">${(a.fraud_probability * 100).toFixed(1)}%</td>
+        <td><span class="fraud-alert-badge ${a.prediction_source}">${a.prediction_source}</span></td>
+        <td>${a.alert_type}</td>
+        <td>
+          <button class="btn btn-g btn-sm" onclick="resolveHitl('${a.approval_id}','approved')">✓</button>
+          <button class="btn btn-r btn-sm" onclick="resolveHitl('${a.approval_id}','rejected')">✗</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    g('hitlTable').innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--red)">Error loading HITL queue</td></tr>';
+  }
+}
+
+async function resolveHitl(approvalId, status) {
+  try {
+    const r = await fetch(API+'/api/fraud-audit/hitl/'+approvalId, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status, resolved_by: 'admin'})
+    });
+    const d = await r.json();
+    if(d.ok) {
+      toast(`HITL ${status}: ${approvalId}`, 'ti');
+      loadHitlQueue();
+      loadAuditSummary();
+    } else {
+      toast('Error: '+d.error, 'te');
+    }
+  } catch(e) {
+    toast('Error resolving HITL', 'te');
+  }
+}
+
+async function loadFraudRules() {
+  try {
+    const region = g('ruleRegionFilter').value;
+    const url = region ? API+'/api/fraud-audit/rules?region='+region : API+'/api/fraud-audit/rules';
+    const r = await fetch(url);
+    const d = await r.json();
+    const tbody = g('rulesTable');
+    if(!d.ok || !d.rules || d.rules.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No rules found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.rules.map(rule => `
+      <tr>
+        <td style="font-weight:600">${rule.rule_id}</td>
+        <td>${rule.rule_name}</td>
+        <td>${rule.region || 'ALL'}</td>
+        <td>${rule.vendor || 'ALL'}</td>
+        <td><span style="color:${rule.action==='block'?'var(--red)':rule.action==='review'?'var(--amber)':'var(--green)'}">${rule.action.toUpperCase()}</span></td>
+      </tr>
+    `).join('');
+    g('rulesTotal').textContent = d.rules.length;
+  } catch(e) {
+    g('rulesTable').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--red)">Error loading rules</td></tr>';
+  }
+}
+
+async function loadAuditSummary() {
+  try {
+    const r = await fetch(API+'/api/fraud-audit/summary');
+    const d = await r.json();
+
+    // Update HITL stats
+    if(d.hitlStats) {
+      g('hitlPending').textContent = d.hitlStats.pending || 0;
+      g('hitlApproved').textContent = d.hitlStats.approved || 0;
+      g('hitlRejected').textContent = d.hitlStats.rejected || 0;
+      g('hitlEscalated').textContent = d.hitlStats.escalated || 0;
+    }
+
+    // Update summary table
+    const tbody = g('auditSummaryTable');
+    if(!d.ok || !d.summary || d.summary.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No audit data yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.summary.slice(0,20).map(s => `
+      <tr>
+        <td>${new Date(s.hour).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}</td>
+        <td><span class="fraud-alert-badge ${s.prediction_source}">${s.prediction_source}</span></td>
+        <td>${s.total_predictions}</td>
+        <td style="color:var(--red)">${s.fraud_predictions}</td>
+        <td>${s.hitl_created || 0}</td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    g('auditSummaryTable').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--red)">Error loading summary</td></tr>';
+  }
+}
+
+async function checkLangflowHealth() {
+  try {
+    const r = await fetch(API+'/api/fraud-audit/langflow/health');
+    const d = await r.json();
+    g('langflowStatus').textContent = d.ok ? '✓ Connected' : '✗ Not reachable';
+    g('langflowStatus').style.color = d.ok ? 'var(--green)' : 'var(--red)';
+  } catch(e) {
+    g('langflowStatus').textContent = '✗ Not reachable';
+    g('langflowStatus').style.color = 'var(--red)';
+  }
+}
+
+// ── TEST CONNECTION ────────────────────────────────────────
+async function testConn(){
+  const btn=event.target,res=g('connResult');
+  btn.setAttribute('disabled','');btn.textContent='Testing...';res.style.display='none';g('dbErr').style.display='none';
+  try{
+    const r=await fetch(API+'/api/connect',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({host:g('dbHost').value,port:g('dbPort').value,database:g('dbName').value,user:g('dbUser').value,password:g('dbPass').value})});
+    const d=await r.json();
+    res.style.display='block';
+    if(d.ok){res.style.borderColor='var(--green)';res.style.background='rgba(63,185,80,.08)';res.style.color='var(--green)';res.innerHTML='✓ '+d.message;}
+    else{res.style.borderColor='var(--red)';res.style.background='rgba(239,68,68,.08)';res.style.color='var(--red)';res.innerHTML='✗ '+d.error;}
+  }catch(e){res.style.display='block';res.style.borderColor='var(--red)';res.style.background='rgba(239,68,68,.08)';res.style.color='var(--red)';res.innerHTML='✗ Cannot reach backend. Run: ./docker-run.sh start';}
+  btn.removeAttribute('disabled');btn.textContent='🔌 Test Connection';
+}
+
+// ── PROGRESS ───────────────────────────────────────────────
+function logP(msg,cls){const l=g('progLog'),d=document.createElement('div');d.className=cls||'';d.textContent=`[${new Date().toLocaleTimeString('en-US',{hour12:false})}] ${msg}`;l.appendChild(d);l.scrollTop=l.scrollHeight;}
+function setP(pct,lbl){g('progFill').style.width=pct+'%';g('progPct').textContent=Math.round(pct)+'%';g('progLbl').textContent=lbl;}
+
+// ── go() ───────────────────────────────────────────────────
+async function go(){
+  const btn=g('goBtn');btn.setAttribute('disabled','');g('dbErr').style.display='none';g('progBox').style.display='block';
+  logP('Connecting to PostgreSQL...','in');setP(3,'Connecting...');
+  let conn;
+  try{const r=await fetch(API+'/api/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({host:g('dbHost').value,port:g('dbPort').value,database:g('dbName').value,user:g('dbUser').value,password:g('dbPass').value})});conn=await r.json();}
+  catch(e){conn={ok:false,error:'Cannot reach backend. Run: ./docker-run.sh start'};}
+  if(!conn.ok){g('dbErr').textContent=conn.error;g('dbErr').style.display='block';logP('✗ '+conn.error,'er');btn.removeAttribute('disabled');return;}
+  logP('✓ '+conn.message,'ok');g('dbDot').className='sdot g';g('dbTxt').textContent=`DB: ${g('dbName').value}`;setP(8,'Initializing...');
+  openWS();
+  await new Promise(r=>setTimeout(r,300));
+  const txTypes=Array.from(g('txTypes').selectedOptions).map(o=>o.value);
+  let setup;
+  try{const r=await fetch(API+'/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numCustomers:parseInt(g('numC').value),accPerCust:parseInt(g('accPC').value),numTxPerAcc:parseInt(g('numTx').value),balRange:g('balR').value,txTypes,fraudMode:g('fraudMode').value,intervalMs:parseInt(g('speed0').value)})});setup=await r.json();}
+  catch(e){setup={ok:false,error:e.message};}
+  if(!setup.ok){logP('✗ '+setup.error,'er');g('dbErr').textContent=setup.error;g('dbErr').style.display='block';btn.removeAttribute('disabled');return;}
+  g('sbC').textContent=`Customers: ${setup.customers}`;g('sbA').textContent=`Accounts: ${setup.accounts}`;g('sbT').textContent=`TX: ${setup.transactions}`;
+  toast(`✓ ${setup.customers} customers, ${setup.accounts} accounts, ${setup.transactions} TX — 3 pipelines launching`,'ts');
+  toPhase2();
+}
+
+function toPhase2(){g('ph1').classList.remove('on');g('ph2').classList.add('on');g('badge1').classList.remove('on');g('badge2').classList.add('on');initDashCharts();startTimer();}
+
+// ── WEBSOCKET ──────────────────────────────────────────────
+function openWS(){
+  if(ws&&ws.readyState===1)return;
+  ws=new WebSocket(WSU);
+  ws.onopen=()=>{g('wsBadge').textContent='WS: Connected';g('wsBadge').className='wsbadge on';};
+  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.type==='progress')onProgress(m.payload);if(m.type==='sim_started')uiLive();if(m.type==='transaction'&&SIM.running&&!SIM.paused)onTx(m.payload);if(m.type==='fraud_alert')onFraud(m.payload);};
+  ws.onclose=()=>{g('wsBadge').textContent='WS: Off';g('wsBadge').className='wsbadge';};
+  ws.onerror=()=>{};
+}
+function onProgress(p){logP(p.msg,p.msg.startsWith('✓')?'ok':p.msg.startsWith('⚠')?'er':'in');if(p.pct)setP(p.pct,p.msg.length>45?p.msg.slice(0,45)+'...':p.msg);}
+
+// ── TX HANDLER ─────────────────────────────────────────────
+function onTx(p){
+  if(!SIM.running||SIM.paused)return;
+  const{tx,account,stats}=p;const isD=['DEBIT','TRANSFER','PAYMENT'].includes(tx.type);
+  sesTxN++;DATA.stats=stats;
+  g('tpsVal').textContent=Math.round((sesTxN/Math.max(1,sesSec))*60);
+  flash('sc0');flash('sc1');
+  g('v0').textContent=stats.total.toLocaleString('en-US');g('v1').textContent=fU(stats.volume);
+  g('v2').textContent=stats.fraud.toLocaleString('en-US');g('v3').textContent=fU(stats.total?stats.volume/stats.total:0);
+  g('d0').textContent=`session: ${sesTxN}`;
+  g('bk0').textContent=stats.credit||0;g('bk1').textContent=stats.debit||0;g('bk2').textContent=stats.transfer||0;g('bk3').textContent=stats.payment||0;
+  addTxRow(tx,account,isD);
+  lineChart.data.labels.push(new Date().toLocaleTimeString('en-US',{hour12:false}));
+  lineChart.data.datasets[0].data.push(parseFloat(tx.amount));
+  if(lineChart.data.labels.length>40){lineChart.data.labels.shift();lineChart.data.datasets[0].data.shift();}
+  lineChart.update('none');
+  barChart.data.datasets[0].data=[stats.credit||0,stats.debit||0,stats.transfer||0,stats.payment||0];
+  barChart.update('none');
+  const a=DATA.accounts.find(x=>x.account_id===account.account_id);
+  if(a){a.balance=account.balance;renderAccounts();}else{DATA.accounts.push({...account,initial_balance:account.balance});renderAccounts();}
+}
+function addTxRow(tx,ac,isD){
+  const feed=g('txFeed'),t=new Date(tx.created_at||Date.now()).toLocaleTimeString('en-US',{hour12:false});
+  const row=document.createElement('div');row.className='txrow';if(tx.is_fraud)row.style.background='rgba(239,68,68,.06)';
+  row.innerHTML=`<div><span class="txb ${tx.type}">${tx.type}</span></div><div><div class="txname">${ac.customer_name||'—'}</div><div class="txnum">${ac.account_id}</div></div><div class="txdesc">${tx.is_fraud?'⚠ ':''}${tx.merchant||tx.description||''}</div><div class="txa ${isD?'neg':'pos'}">${isD?'-':'+'}${fU(tx.amount)}</div><div class="txt">${t}</div>`;
+  feed.insertBefore(row,feed.firstChild);feedN++;g('feedN').textContent=`${feedN} tx`;
+  while(feed.children.length>300)feed.removeChild(feed.lastChild);
+}
+// Enhanced Fraud Alert Handler
+let _fraudAlertTimeout=null;
+function showFraudAlert(data){
+  console.log('[showFraudAlert] Showing alert for TX:', data.tx_id);
+  const box=g('fraudAlertBox');
+  const content=g('fraudAlertContent');
+  const subtitle=g('fraudAlertSubtitle');
+
+  // Determine source and badge
+  let source='Rules-Based';
+  let badgeClass='rule';
+  let scoreInfo='';
+
+  if(data.prediction_source){
+    if(data.prediction_source==='kafka'){source='Kafka ML';badgeClass='kafka';}
+    else if(data.prediction_source==='clickhouse'){source='ClickHouse ML';badgeClass='ch';}
+    else if(data.prediction_source==='risingwave'){source='RisingWave ML';badgeClass='rw';}
+    if(data.ml_score){scoreInfo=`<div class="fraud-alert-row"><span class="fraud-alert-label">ML Score</span><span class="fraud-alert-value">${(data.ml_score*100).toFixed(1)}%</span></div>`;}
+  }
+
+  subtitle.textContent=`Detected by ${source}`;
+
+  const ttdf=data.ttdf_milliseconds?`${data.ttdf_milliseconds.toFixed(0)}ms`:'—';
+
+  content.innerHTML=`
+    <div class="fraud-alert-row">
+      <span class="fraud-alert-label">Source</span>
+      <span class="fraud-alert-value"><span class="fraud-alert-badge ${badgeClass}">${source}</span></span>
+    </div>
+    <div class="fraud-alert-row">
+      <span class="fraud-alert-label">Transaction ID</span>
+      <span class="fraud-alert-value">#${data.tx_id||'?'}</span>
+    </div>
+    <div class="fraud-alert-row">
+      <span class="fraud-alert-label">Customer</span>
+      <span class="fraud-alert-value">${data.customer_name||'—'}</span>
+    </div>
+    <div class="fraud-alert-row">
+      <span class="fraud-alert-label">Merchant</span>
+      <span class="fraud-alert-value">${data.merchant||data.description||'—'}</span>
+    </div>
+    <div class="fraud-alert-row">
+      <span class="fraud-alert-label">Amount</span>
+      <span class="fraud-alert-value highlight">${fU(data.amount)}</span>
+    </div>
+    ${scoreInfo}
+    <div class="fraud-alert-row">
+      <span class="fraud-alert-label">Reason</span>
+      <span class="fraud-alert-value" style="color:var(--red)">${data.fraud_reason||'Suspicious Pattern'}</span>
+    </div>
+    <div class="fraud-alert-row">
+      <span class="fraud-alert-label">TTDF</span>
+      <span class="fraud-alert-value">${ttdf}</span>
+    </div>
+    <div class="fraud-alert-row">
+      <span class="fraud-alert-label">Time</span>
+      <span class="fraud-alert-value">${new Date(data.created_at||Date.now()).toLocaleString('en-US',{hour12:false})}</span>
+    </div>
+  `;
+
+  box.classList.add('show');
+
+  // Auto-hide after 10 seconds
+  if(_fraudAlertTimeout)clearTimeout(_fraudAlertTimeout);
+  _fraudAlertTimeout=setTimeout(()=>{box.classList.remove('show');},10000);
+}
+
+function closeFraudAlert(){
+  g('fraudAlertBox').classList.remove('show');
+  if(_fraudAlertTimeout)clearTimeout(_fraudAlertTimeout);
+}
+
+function onFraud(p){
+  console.log('[onFraud] Received fraud alert:', p);
+  const{tx,account}=p;
+  flash('sc2');
+
+  // Popup notification disabled — too noisy during live synthetic data flow.
+  // Counter (sc2) + fraud table below still update.
+
+  // Update table (only if fraud tab elements exist)
+  const b=g('fdAlertBody')||g('fraudBody');
+  if(!b)return;
+  if(b.querySelector('td[colspan]'))b.innerHTML='';
+  const tr=document.createElement('tr');
+  const t=new Date(tx.created_at||Date.now()).toLocaleTimeString('en-US',{hour12:false});
+  const source=tx.prediction_source?(tx.prediction_source==='kafka'?'Kafka':(tx.prediction_source==='clickhouse'?'ClickHouse':'RisingWave')):'Rules';
+  const scoreOrReason=tx.ml_score?`${(tx.ml_score*100).toFixed(1)}%`:(tx.fraud_reason||'Flagged');
+  const ttdf=tx.ttdf_milliseconds?`${tx.ttdf_milliseconds.toFixed(0)}ms`:'—';
+
+  tr.innerHTML=`<td style="color:var(--muted);font-size:11px">#${tx.tx_id||'?'}</td><td style="font-size:10px"><span class="fraud-alert-badge ${source.toLowerCase()}">${source}</span></td><td style="font-weight:600">${account.customer_name||'—'}</td><td>${tx.merchant||tx.description||''}</td><td style="font-size:11px">${tx.fraud_reason||'Pattern'}</td><td style="text-align:right;color:var(--red);font-size:11px">${scoreOrReason}</td><td style="text-align:right;color:var(--red);font-weight:700">${fU(tx.amount)}</td><td style="text-align:right;font-size:10px;color:var(--muted)">${ttdf}</td><td style="color:var(--muted);font-size:11px">${t}</td>`;
+  b.insertBefore(tr,b.firstChild);
+
+  // Update counter
+  const counter=g('fdAlertCount')||g('fraudN');
+  if(counter)counter.textContent=`${DATA.stats.fraud} alerts`;
+}
+function renderAccounts(){const list=g('acList'),sorted=[...DATA.accounts].sort((a,b)=>b.balance-a.balance).slice(0,20),max=sorted[0]?.balance||1;list.innerHTML='';sorted.forEach(a=>{const pct=Math.min(100,(a.balance/max)*100),up=(a.balance||0)>=(a.initial_balance||0);const row=document.createElement('div');row.className='acrow';row.innerHTML=`<div class="aci"><div class="acn">${a.customer_name||'—'}</div><div class="acs">${a.account_id} · ${a.account_type||''}</div><div class="acbar"><div class="acfill" style="width:${pct}%"></div></div></div><div class="acbal" style="color:${up?'var(--green)':'var(--red)'}">${fU(a.balance)}</div>`;list.appendChild(row);});g('acN').textContent=`${DATA.accounts.length} total`;}
+
+// ── CHARTS ─────────────────────────────────────────────────
+function initDashCharts(){
+  const da={responsive:true,animation:{duration:200},plugins:{legend:{display:false}}};
+  lineChart=new Chart(g('lineC').getContext('2d'),{type:'line',data:{labels:[],datasets:[{label:'Amt',data:[],borderColor:'#00ff88',backgroundColor:'rgba(0,255,136,.07)',borderWidth:2,fill:true,tension:0.4,pointRadius:0}]},options:{...da,scales:{x:{display:false},y:{display:true,grid:{color:'rgba(48,54,61,.4)'},ticks:{color:'#8b949e',font:{size:10},callback:v=>fBig(v)}}}}});
+  barChart=new Chart(g('barC').getContext('2d'),{type:'bar',data:{labels:['CREDIT','DEBIT','TRANSFER','PAYMENT'],datasets:[{data:[0,0,0,0],backgroundColor:['rgba(63,185,80,.75)','rgba(248,81,73,.75)','rgba(14,165,233,.75)','rgba(245,158,11,.75)'],borderRadius:4}]},options:{...da,scales:{x:{ticks:{color:'#8b949e',font:{size:10}},grid:{display:false}},y:{display:false}}}});
+}
+function flash(id){const e=g(id);e.classList.remove('fl');void e.offsetWidth;e.classList.add('fl');}
+function chSpeed(){const v=parseInt(g('speedSl').value),burst=g('burst').checked;g('speedLbl').textContent=(1000/v).toFixed(1)+'/s';fetch(API+'/api/sim/speed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({intervalMs:burst?Math.max(50,Math.floor(v/3)):v})}).catch(()=>{});}
+function startTimer(){sesSec=0;sesTxN=0;if(sesTmr)clearInterval(sesTmr);sesTmr=setInterval(()=>{sesSec++;const m=String(Math.floor(sesSec/60)).padStart(2,'0'),s=String(sesSec%60).padStart(2,'0');g('sesT').textContent=`${m}:${s}`;},1000);}
+
+// ── ANALYTICS ──────────────────────────────────────────────
+async function chGet(path){const r=await fetch(API+path);return r.json();}
+
+function mkChart(id,type,data,opts){
+  const ctx=g(id).getContext('2d');
+  return new Chart(ctx,{type,data,options:{responsive:true,animation:{duration:400},plugins:{legend:{labels:{color:'#8b949e',font:{family:'JetBrains Mono',size:10}}}},...opts}});
+}
+
+let anInited=false;
+function initAnCharts(){
+  if(anInited)return;anInited=true;
+  anCharts.vol=mkChart('anVol','bar',{labels:[],datasets:[
+    {label:'Volume',data:[],backgroundColor:'rgba(0,255,136,.6)',borderRadius:3,yAxisID:'y'},
+    {label:'TX Count',data:[],backgroundColor:'rgba(14,165,233,.4)',borderRadius:3,yAxisID:'y1'}
+  ]},{scales:{x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},y:{position:'left',ticks:{color:'#8b949e',font:{size:9},callback:v=>fBig(v)},grid:{color:'rgba(48,54,61,.4)'}},y1:{position:'right',ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}}},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:10}}}}});
+  anCharts.type=mkChart('anType','doughnut',{labels:['CREDIT','DEBIT','TRANSFER','PAYMENT'],datasets:[{data:[0,0,0,0],backgroundColor:['rgba(63,185,80,.8)','rgba(248,81,73,.8)','rgba(14,165,233,.8)','rgba(245,158,11,.8)'],borderWidth:0}]},{cutout:'65%',plugins:{legend:{position:'right',labels:{color:'#8b949e',font:{size:10}}}}});
+  anCharts.velo=mkChart('anVelo','line',{labels:[],datasets:[{label:'TX/min',data:[],borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,.08)',borderWidth:2,fill:true,tension:0.4,pointRadius:0}]},{scales:{x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#8b949e',font:{size:9}},grid:{color:'rgba(48,54,61,.4)'}}},plugins:{legend:{display:false}}});
+  anCharts.fraud=mkChart('anFraud','line',{labels:[],datasets:[{label:'Fraud %',data:[],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.08)',borderWidth:2,fill:true,tension:0.4,pointRadius:0}]},{scales:{x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#8b949e',font:{size:9},callback:v=>v+'%'},grid:{color:'rgba(48,54,61,.4)'}}},plugins:{legend:{display:false}}});
+  anCharts.cat=mkChart('anCat','bar',{labels:[],datasets:[{label:'TX',data:[],backgroundColor:'rgba(14,165,233,.65)',borderRadius:3}]},{indexAxis:'y',scales:{x:{ticks:{color:'#8b949e',font:{size:8}},grid:{color:'rgba(48,54,61,.4)'}},y:{ticks:{color:'#8b949e',font:{size:8}},grid:{display:false}}},plugins:{legend:{display:false}}});
+  anCharts.chan=mkChart('anChan','doughnut',{labels:[],datasets:[{data:[],backgroundColor:['rgba(0,255,136,.7)','rgba(14,165,233,.7)','rgba(245,158,11,.7)','rgba(239,68,68,.7)','rgba(168,85,247,.7)','rgba(249,115,22,.7)'],borderWidth:0}]},{cutout:'60%',plugins:{legend:{position:'right',labels:{color:'#8b949e',font:{size:9}}}}});
+}
+
+async function loadAnalytics(){
+  initAnCharts();
+  await Promise.all([loadAnStatus(),loadAnSummary(),loadAnVolume(),loadAnType(),loadAnVelo(),loadAnFraud(),loadAnMerchants(),loadAnCategory(),loadAnChannel(),loadAnCustomers()]);
+}
+async function loadAnStatus(){
+  try{const d=await chGet('/api/analytics/status');const ch=d.ch||{},rw=d.rw||{},kafka=d.kafka||{};
+    const chDot=g('chDot'),chTxt=g('chTxt');
+    if(ch.connected){chDot.className='ldot2 on';chTxt.textContent='ClickHouse: Connected';chTxt.style.color='var(--acc)';}
+    else{chDot.className='ldot2';chTxt.textContent='ClickHouse: '+((ch.error||'Connecting...')).slice(0,50);chTxt.style.color='var(--red)';}
+    g('pgRowsTxt').textContent=fN(d.ch?.rowsInPG||0);g('chRowsTxt').textContent=fN(ch.rowsInCH||0);
+    const lag=d.ch?.lagSeconds||0;g('lagTxt').textContent=lag>0?`~${lag.toFixed(0)}s behind`:'In sync ✓';g('lagTxt').style.color=lag>5?'var(--amber)':'var(--green)';
+    const rt=g('replTxt');rt.textContent=ch.dbReady?'✓ MaterializedPostgreSQL active':'Replication: initializing...';rt.style.color=ch.dbReady?'var(--green)':'var(--muted)';
+    // status bar
+    g('ch2Dot').className=ch.connected?'sdot g':'sdot r';g('ch2Txt').textContent=`CH: ${fN(ch.rowsInCH||0)} rows`;
+    g('kafkaDot').className=kafka.connected?'sdot g':'sdot r';g('kafkaTxt').textContent=`Kafka: ${kafka.connectorStatus||'—'}`;
+  }catch(e){}
+}
+async function loadAnSummary(){try{const d=await chGet('/api/analytics/summary');if(!d.ok)return;const s=d.data;g('an0').textContent=fN(s.total_tx);g('an1').textContent=fBig(s.total_volume);g('an2').textContent='$'+(parseFloat(s.avg_amount)||0).toFixed(2);g('an3').textContent=(parseFloat(s.fraud_pct)||0).toFixed(2)+'%';}catch(e){}}
+async function loadAnVolume(){try{const d=await chGet('/api/analytics/volume-by-hour');if(!d.ok)return;anCharts.vol.data.labels=d.data.map(r=>{const h=new Date(r.hour);return h.toLocaleTimeString('en-US',{hour:'numeric',hour12:true});});anCharts.vol.data.datasets[0].data=d.data.map(r=>parseFloat(r.volume)||0);anCharts.vol.data.datasets[1].data=d.data.map(r=>parseInt(r.tx_count)||0);anCharts.vol.update();}catch(e){}}
+async function loadAnType(){try{const d=await chGet('/api/analytics/by-type');if(!d.ok)return;const m={};d.data.forEach(r=>m[r.type]=parseInt(r.tx_count)||0);anCharts.type.data.datasets[0].data=['CREDIT','DEBIT','TRANSFER','PAYMENT'].map(t=>m[t]||0);anCharts.type.update();}catch(e){}}
+async function loadAnVelo(){try{const d=await chGet('/api/analytics/velocity');if(!d.ok)return;anCharts.velo.data.labels=d.data.map(r=>{const m=new Date(r.minute);return m.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});});anCharts.velo.data.datasets[0].data=d.data.map(r=>parseInt(r.tx_count)||0);anCharts.velo.update();}catch(e){}}
+async function loadAnFraud(){try{const d=await chGet('/api/analytics/fraud-trend');if(!d.ok)return;anCharts.fraud.data.labels=d.data.map(r=>{const h=new Date(r.hour);return h.toLocaleTimeString('en-US',{hour:'numeric',hour12:true});});anCharts.fraud.data.datasets[0].data=d.data.map(r=>parseFloat(r.fraud_pct)||0);anCharts.fraud.update();}catch(e){}}
+async function loadAnMerchants(){try{const d=await chGet('/api/analytics/top-merchants');if(!d.ok)return;g('anMerch').innerHTML=d.data.map(r=>`<tr><td style="font-weight:600">${r.merchant}</td><td style="text-align:right">${fN(r.tx_count)}</td><td style="text-align:right;color:var(--green)">${fBig(r.total_volume)}</td><td style="text-align:right;color:${parseInt(r.fraud_count)>0?'var(--red)':'var(--muted)'}">${fN(r.fraud_count)}</td></tr>`).join('');}catch(e){}}
+async function loadAnCategory(){try{const d=await chGet('/api/analytics/by-category');if(!d.ok)return;anCharts.cat.data.labels=d.data.map(r=>r.category);anCharts.cat.data.datasets[0].data=d.data.map(r=>parseInt(r.tx_count)||0);anCharts.cat.update();}catch(e){}}
+async function loadAnChannel(){try{const d=await chGet('/api/analytics/by-channel');if(!d.ok)return;anCharts.chan.data.labels=d.data.map(r=>r.channel);anCharts.chan.data.datasets[0].data=d.data.map(r=>parseInt(r.tx_count)||0);anCharts.chan.update();}catch(e){}}
+async function loadAnCustomers(){try{const d=await chGet('/api/analytics/top-customers');if(!d.ok)return;g('anCust').innerHTML=d.data.map(r=>`<tr><td style="font-weight:600">${r.name||'—'}</td><td style="color:var(--muted);font-size:11px">${r.customer_id}</td><td style="text-align:right">${fN(r.tx_count)}</td><td style="text-align:right;color:var(--green)">${fBig(r.volume)}</td><td style="text-align:right;color:${parseInt(r.fraud_count)>0?'var(--red)':'var(--muted)'}">${fN(r.fraud_count)}</td></tr>`).join('');}catch(e){}}
+
+// Auto-refresh analytics + comparison + kafka + ML when active
+setInterval(()=>{if(_anTab)loadAnalytics();if(_cpTab)loadComparison();if(_kTab)loadKafka();if(_fdTab)loadFraud();},10000);
+
+// ── COMPARISON ─────────────────────────────────────────────
+let cpInited=false;
+function initCpCharts(){
+  if(cpInited)return;cpInited=true;
+  const co={responsive:true,animation:{duration:300},plugins:{legend:{display:false}}};
+  cpCharts.rwType=mkChart('cpRwType','bar',{labels:['CREDIT','DEBIT','TRANSFER','PAYMENT'],datasets:[{data:[0,0,0,0],backgroundColor:'rgba(168,85,247,.65)',borderRadius:3}]},{...co,scales:{x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},y:{display:false}}});
+  cpCharts.chType=mkChart('cpChType','bar',{labels:['CREDIT','DEBIT','TRANSFER','PAYMENT'],datasets:[{data:[0,0,0,0],backgroundColor:'rgba(14,165,233,.65)',borderRadius:3}]},{...co,scales:{x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},y:{display:false}}});
+  cpCharts.compare=mkChart('cpCompare','line',{labels:[],datasets:[
+    {label:'RisingWave MV',data:[],borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,.08)',borderWidth:2,fill:false,tension:0.3,pointRadius:2},
+    {label:'ClickHouse',data:[],borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,.08)',borderWidth:2,fill:false,tension:0.3,pointRadius:2}
+  ]},{scales:{x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#8b949e',font:{size:9}},grid:{color:'rgba(48,54,61,.4)'}}},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:10}}}}});
+}
+
+async function loadComparison(){
+  initCpCharts();
+  try{
+    const [stat,rw,ch]=await Promise.all([chGet('/api/comparison/status'),chGet('/api/comparison/rw-mv'),chGet('/api/comparison/ch-mv')]);
+    const s=stat||{};
+    g('cpPgRows').textContent=fN(s.pgCount||0);
+    g('cpRwRows').textContent=fN(s.rw?.txCount||0);g('cpRwMvRows').textContent=fN(s.rw?.mvRows||0);
+    g('cpChRows').textContent=fN(s.ch?.txCount||0);g('cpChMvRows').textContent=fN(s.ch?.mvRows||0);
+    const rwLag=s.rwLag||0,chLag=s.chLag||0,pg=s.pgCount||1;
+    g('cpRwLag').textContent=rwLag>0?`${fN(rwLag)} rows`:'In sync ✓';g('cpChLag').textContent=chLag>0?`${fN(chLag)} rows`:'In sync ✓';
+    g('rwLagBar').style.width=Math.max(0,Math.min(100,(1-rwLag/pg)*100))+'%';
+    g('chLagBar').style.width=Math.max(0,Math.min(100,(1-chLag/pg)*100))+'%';
+    const rwDot=g('rwDot'),rwStat=g('cpRwStatus');
+    if(s.rw?.connected){rwDot.className='ldot2 on';rwStat.textContent='Connected';rwStat.style.color='var(--green)';}
+    else{rwDot.className='ldot2';rwStat.textContent='Disconnected';rwStat.style.color='var(--red)';}
+    const chDot2=g('chDot2'),chStat=g('cpChStatus');
+    if(s.ch?.connected){chDot2.className='ldot2 on';chStat.textContent='Connected';chStat.style.color='var(--green)';}
+    else{chDot2.className='ldot2';chStat.textContent='Disconnected';chStat.style.color='var(--red)';}
+    // RW type breakdown
+    if(rw.ok&&rw.byType){const m={};rw.byType.forEach(r=>m[r.type]=parseInt(r.cnt)||0);cpCharts.rwType.data.datasets[0].data=['CREDIT','DEBIT','TRANSFER','PAYMENT'].map(t=>m[t]||0);cpCharts.rwType.update();}
+    // CH type breakdown
+    if(ch.ok&&ch.byType){const m={};ch.byType.forEach(r=>m[r.type]=parseInt(r.cnt)||0);cpCharts.chType.data.datasets[0].data=['CREDIT','DEBIT','TRANSFER','PAYMENT'].map(t=>m[t]||0);cpCharts.chType.update();}
+    // Comparison chart (per minute)
+    if(rw.ok&&ch.ok){
+      const rwD=rw.perMin||[];const chD=ch.perHour||[];
+      const labels=rwD.slice(-20).map(r=>new Date(r.minute).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}));
+      cpCharts.compare.data.labels=labels;
+      cpCharts.compare.data.datasets[0].data=rwD.slice(-20).map(r=>parseInt(r.tx_count)||0);
+      cpCharts.compare.data.datasets[1].data=chD.slice(-20).map(r=>parseInt(r.tx_count)||0);
+      cpCharts.compare.update();
+    }
+  }catch(e){console.log('Comparison error:',e.message);}
+}
+
+// ── KAFKA ──────────────────────────────────────────────────
+async function loadKafka(){
+  await Promise.all([loadKafkaStatus(), loadKafkaMetrics()]);
+}
+
+async function loadKafkaStatus(){
+  try{
+    const d=await chGet('/api/kafka/tasks');
+    const conn=d.connector||{},tasks=d.tasks||[];
+    const cs=conn.state||'UNKNOWN', ts=tasks[0]?.state||'UNKNOWN';
+    const mkS=(state)=>`<span class="kstatus ${state==='RUNNING'?'running':state==='STOPPED'||state==='FAILED'?'stopped':'unknown'}">${state}</span>`;
+    g('kafkaConnStatus').innerHTML=mkS(cs); g('kafkaTaskStatus').innerHTML=mkS(ts);
+    g('kafkaDot').className=cs==='RUNNING'?'sdot g':cs==='FAILED'?'sdot r':'sdot a';
+    g('kafkaTxt').textContent='Kafka: '+cs;
+    if(tasks[0]?.trace){g('kafkaTaskError').textContent='Task error: '+tasks[0].trace.slice(0,200);g('kafkaTaskError').style.display='block';}
+    else{g('kafkaTaskError').style.display='none';}
+  }catch(e){
+    g('kafkaConnStatus').innerHTML='<span class="kstatus unknown">UNAVAILABLE</span>';
+    g('kafkaTaskStatus').innerHTML='<span class="kstatus unknown">UNAVAILABLE</span>';
+    g('kafkaTxt').textContent='Kafka: unavailable';
+  }
+}
+
+async function loadKafkaMetrics(){
+  try{
+    const d=await chGet('/api/kafka/metrics');
+    if(!d.ok)return;
+    const m=d.metrics;
+
+    // Header metric cards
+    g('kafkaTotalProduced').textContent=fN(m.totalProduced);
+    g('kafkaFraudProduced').textContent=fN(m.fraudProduced);
+    g('kafkaSimRate').textContent=m.simRunning?m.simRate+' tx/min':'Stopped';
+    g('kafkaSimRate').style.color=m.simRunning?'var(--green)':'var(--muted)';
+
+    // Pipeline diagram values
+    const txTopic=m.topics?.find(t=>t.table==='transactions');
+    if(txTopic){
+      g('pipePgRows').textContent=fN(txTopic.pgRows)+' rows';
+      g('pipeChRows').textContent=fN(m.chAnalyticsRows)+' rows';
+    }
+    g('pipeDebeziumStatus').textContent=m.connectorStatus==='RUNNING'?'● RUNNING':'○ '+m.connectorStatus;
+    g('pipeDebeziumStatus').style.color=m.connectorStatus==='RUNNING'?'var(--green)':'var(--red)';
+    g('pipeKafkaStatus').textContent=m.topics?.length?'● '+m.topics.length+' topics':'○ no topics';
+    g('pipeKafkaStatus').style.color=m.topics?.length?'var(--green)':'var(--muted)';
+
+    // Schema row counts
+    if(g('pipeChAnalytics')) g('pipeChAnalytics').textContent=fN(m.chAnalyticsRows);
+    if(g('pipeChKafkaCDC'))  g('pipeChKafkaCDC').textContent=fN(m.chKafkaCDCRows);
+
+    // Per-topic table with CH consumption data
+    if(m.topics&&m.topics.length>0){
+      g('kafkaTopicTable').innerHTML=m.topics.map(t=>{
+        const lag=t.lag||0;
+        const isConsuming=t.chRows>0;
+        const lagColor=lag===0?'var(--green)':lag<100?'var(--amber)':'var(--red)';
+        const streamHtml=t.status==='STREAMING'
+          ?'<span style="color:var(--green);font-weight:700">● STREAMING</span>'
+          :'<span style="color:var(--muted)">○ idle</span>';
+        return `<tr>
+          <td><span class="ktopic-name" style="font-size:11px">${t.name}</span></td>
+          <td style="text-align:center">
+            <span class="kstatus ${t.status==='STREAMING'?'running':'unknown'}" style="font-size:10px">${t.status}</span>
+          </td>
+          <td style="text-align:right;font-weight:700;color:var(--text)">${fN(t.pgRows)}</td>
+          <td style="text-align:right;font-weight:700;color:var(--blue)">${fN(t.chRows)}</td>
+          <td style="text-align:right;font-weight:700;color:${lagColor}">${lag===0?'✓ 0':fN(lag)}</td>
+          <td style="text-align:center">${streamHtml}</td>
+        </tr>`;
+      }).join('');
+    }
+  }catch(e){console.log('Kafka metrics error:',e.message);}
+}
+
+async function restartKafka(){
+  try{
+    await fetch(API+'/api/kafka/restart',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    toast('Connector restart requested','ti');
+    setTimeout(loadKafka,3000);
+  }catch(e){toast('Restart failed: '+e.message,'te');}
+}
+
+// ── ML FRAUD DETECTION ─────────────────────────────────────
+let mlInited=false;
+let mlCharts={};
+
+function initMLCharts(){
+  if(mlInited)return;mlInited=true;
+  const co={responsive:true,animation:{duration:300},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:10}}}}};
+  mlCharts.ttdf=mkChart('mlTtdfChart','line',{labels:[],datasets:[
+    {label:'RisingWave TTDF',data:[],borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,.08)',borderWidth:2,fill:false,tension:0.3,pointRadius:2},
+    {label:'ClickHouse TTDF',data:[],borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,.08)',borderWidth:2,fill:false,tension:0.3,pointRadius:2},
+    {label:'Kafka TTDF',data:[],borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.08)',borderWidth:2,fill:false,tension:0.3,pointRadius:2}
+  ]},{scales:{x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#8b949e',font:{size:9},callback:v=>v+'ms'},grid:{color:'rgba(48,54,61,.4)'}}},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:10}}}}});
+}
+
+async function loadML(){
+  initMLCharts();
+  await Promise.all([loadMLStatus(),loadMLMetrics(),loadMLPredictions(),loadMLAlerts()]);
+}
+
+async function loadMLStatus(){
+  try{
+    const d=await chGet('/api/ml/status');
+    if(!d.ok)return;
+
+    // Service statuses
+    const mkS=(running,status)=>{
+      if(!running)return '<span class="kstatus stopped">OFFLINE</span>';
+      if(status==='waiting_for_model')return '<span class="kstatus unknown">WAITING</span>';
+      return '<span class="kstatus running">RUNNING</span>';
+    };
+
+    g('mlJupyterStatus').innerHTML=mkS(d.services.jupyter.running,'active');
+    g('mlInferenceStatus').innerHTML=mkS(d.services.mlInference.running,d.services.mlInference.status);
+    g('mlAlertStatus').innerHTML=mkS(d.services.fraudAlert.running,'active');
+
+  }catch(e){
+    console.log('ML status error:',e.message);
+  }
+}
+
+async function loadMLMetrics(){
+  try{
+    const d=await chGet('/api/ml/metrics');
+    if(!d.ok||!d.performance)return;
+
+    const perf=d.performance;
+    const rw=perf.find(p=>p.prediction_source==='risingwave')||{};
+    const ch=perf.find(p=>p.prediction_source==='clickhouse')||{};
+    const kafka=perf.find(p=>p.prediction_source==='kafka')||{};
+
+    // RisingWave metrics
+    g('mlRwTotal').textContent=fN(rw.total_predictions||0);
+    g('mlRwFraud').textContent=fN(rw.fraud_detected||0);
+    g('mlRwRate').textContent=(parseFloat(rw.fraud_rate)||0).toFixed(2)+'%';
+    g('mlRwTtdf').textContent=(parseFloat(rw.avg_ttdf_ms)||0).toFixed(1)+'ms';
+    g('mlRwP95').textContent=(parseFloat(rw.p95_ttdf_ms)||0).toFixed(1)+'ms';
+    g('mlRwMinMax').textContent=`${rw.min_ttdf_ms||0}ms / ${rw.max_ttdf_ms||0}ms`;
+    g('mlRwDot').className=rw.total_predictions>0?'ldot2 on':'ldot2';
+
+    // ClickHouse metrics
+    g('mlChTotal').textContent=fN(ch.total_predictions||0);
+    g('mlChFraud').textContent=fN(ch.fraud_detected||0);
+    g('mlChRate').textContent=(parseFloat(ch.fraud_rate)||0).toFixed(2)+'%';
+    g('mlChTtdf').textContent=(parseFloat(ch.avg_ttdf_ms)||0).toFixed(1)+'ms';
+    g('mlChP95').textContent=(parseFloat(ch.p95_ttdf_ms)||0).toFixed(1)+'ms';
+    g('mlChMinMax').textContent=`${ch.min_ttdf_ms||0}ms / ${ch.max_ttdf_ms||0}ms`;
+    g('mlChDot').className=ch.total_predictions>0?'ldot2 on':'ldot2';
+
+    // Kafka metrics
+    g('mlKafkaTotal').textContent=fN(kafka.total_predictions||0);
+    g('mlKafkaFraud').textContent=fN(kafka.fraud_detected||0);
+    g('mlKafkaRate').textContent=(parseFloat(kafka.fraud_rate)||0).toFixed(2)+'%';
+    g('mlKafkaTtdf').textContent=(parseFloat(kafka.avg_ttdf_ms)||0).toFixed(1)+'ms';
+    g('mlKafkaP95').textContent=(parseFloat(kafka.p95_ttdf_ms)||0).toFixed(1)+'ms';
+    g('mlKafkaMinMax').textContent=`${kafka.min_ttdf_ms||0}ms / ${kafka.max_ttdf_ms||0}ms`;
+    g('mlKafkaDot').className=kafka.total_predictions>0?'ldot2 on':'ldot2';
+
+    // Load TTDF trend
+    const ttdfData=await chGet('/api/ml/ttdf');
+    if(ttdfData.ok&&ttdfData.ttdfTrend){
+      const trend=ttdfData.ttdfTrend;
+      const labels=[...new Set(trend.map(t=>new Date(t.minute).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})))].slice(-20);
+      const rwData=trend.filter(t=>t.prediction_source==='risingwave').slice(-20).map(t=>parseFloat(t.avg_ttdf)||0);
+      const chData=trend.filter(t=>t.prediction_source==='clickhouse').slice(-20).map(t=>parseFloat(t.avg_ttdf)||0);
+      const kafkaData=trend.filter(t=>t.prediction_source==='kafka').slice(-20).map(t=>parseFloat(t.avg_ttdf)||0);
+
+      mlCharts.ttdf.data.labels=labels;
+      mlCharts.ttdf.data.datasets[0].data=rwData;
+      mlCharts.ttdf.data.datasets[1].data=chData;
+      mlCharts.ttdf.data.datasets[2].data=kafkaData;
+      mlCharts.ttdf.update();
+    }
+
+  }catch(e){
+    console.log('ML metrics error:',e.message);
+  }
+}
+
+async function loadMLPredictions(){
+  try{
+    const filter=g('mlPredFilter')?.value||'all';
+    const d=await chGet(`/api/ml/predictions?filter=${filter}&limit=50`);
+    if(!d.ok||!d.predictions)return;
+
+    g('mlPredsCount').textContent=`${d.predictions.length} predictions`;
+
+    if(d.predictions.length===0){
+      g('mlPredsTable').innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:var(--muted)"><div class="eico" style="font-size:24px">📊</div>No predictions yet</td></tr>';
+      return;
+    }
+
+    g('mlPredsTable').innerHTML=d.predictions.map(p=>{
+      const agreementColor=p.agreement_status==='agreement'?'var(--green)':p.agreement_status==='ml_only'?'var(--amber)':p.agreement_status==='rule_only'?'var(--red)':'var(--muted)';
+      const agreementText=p.agreement_status==='agreement'?'✓ Agreement':p.agreement_status==='ml_only'?'ML only':p.agreement_status==='rule_only'?'Rule only':'Disagreement';
+      const mlFraudBadge=p.ml_fraud?'<span style="background:rgba(239,68,68,.12);color:var(--red);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">FRAUD</span>':'<span style="background:rgba(63,185,80,.12);color:var(--green);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">SAFE</span>';
+      const ruleFraudBadge=p.rule_based_fraud?'<span style="background:rgba(239,68,68,.12);color:var(--red);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">FRAUD</span>':'<span style="background:rgba(63,185,80,.12);color:var(--green);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">SAFE</span>';
+      const sourceColor=p.prediction_source==='risingwave'?'var(--purple)':p.prediction_source==='kafka'?'var(--green)':p.prediction_source==='pgaa'?'#fbbf24':p.prediction_source==='pgaa_hybrid'?'#eab308':'var(--blue)';
+      const sourceLabel=p.prediction_source==='risingwave'?'RW':p.prediction_source==='kafka'?'KFK':p.prediction_source==='pgaa'?'PGAA':p.prediction_source==='pgaa_hybrid'?'HYB':'CH';
+      const sourceRgba=p.prediction_source==='risingwave'?'168,85,247':p.prediction_source==='kafka'?'34,197,94':p.prediction_source==='pgaa'?'251,191,36':p.prediction_source==='pgaa_hybrid'?'234,179,8':'14,165,233';
+      const time=new Date(p.predicted_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+
+      return `<tr>
+        <td style="font-size:11px;color:var(--muted)">#${p.tx_id}</td>
+        <td><span style="background:rgba(${sourceRgba},.12);color:${sourceColor};padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">${sourceLabel}</span></td>
+        <td style="font-size:12px">${p.merchant||'—'}</td>
+        <td style="text-align:right;font-weight:700">$${(parseFloat(p.amount)||0).toFixed(2)}</td>
+        <td style="text-align:right;font-weight:700;color:${p.fraud_probability>=0.7?'var(--red)':'var(--muted)'}">${(parseFloat(p.fraud_probability)||0).toFixed(3)}</td>
+        <td>${mlFraudBadge}</td>
+        <td>${ruleFraudBadge}</td>
+        <td><span style="color:${agreementColor};font-size:11px;font-weight:600">${agreementText}</span></td>
+        <td style="text-align:right;font-weight:700;color:${p.ttdf_milliseconds<100?'var(--green)':p.ttdf_milliseconds<300?'var(--amber)':'var(--red)'}">${p.ttdf_milliseconds||'—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${time}</td>
+      </tr>`;
+    }).join('');
+
+  }catch(e){
+    console.log('ML predictions error:',e.message);
+  }
+}
+
+async function loadMLAlerts(){
+  try{
+    const d=await chGet('/api/ml/alerts?limit=10');
+    if(!d.ok||!d.alerts)return;
+
+    g('mlAlertsCount').textContent=`${d.alerts.length} alerts`;
+
+    if(d.alerts.length===0){
+      g('mlAlertsTable').innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--muted)"><div class="eico" style="font-size:24px">✅</div>No alerts yet</td></tr>';
+      return;
+    }
+
+    g('mlAlertsTable').innerHTML=d.alerts.map(a=>{
+      const severityColor={critical:'var(--red)',high:'var(--orange)',medium:'var(--amber)',low:'var(--green)'}[a.alert_severity]||'var(--muted)';
+      const severityEmoji={critical:'🔴',high:'🟠',medium:'🟡',low:'🟢'}[a.alert_severity]||'⚪';
+      const sourceColor=a.prediction_source==='risingwave'?'var(--purple)':a.prediction_source==='kafka'?'var(--green)':a.prediction_source==='pgaa'?'#fbbf24':a.prediction_source==='pgaa_hybrid'?'#eab308':'var(--blue)';
+      const sourceLabel=a.prediction_source==='risingwave'?'RW':a.prediction_source==='kafka'?'KFK':a.prediction_source==='pgaa'?'PGAA':a.prediction_source==='pgaa_hybrid'?'HYB':'CH';
+      const sourceRgba=a.prediction_source==='risingwave'?'168,85,247':a.prediction_source==='kafka'?'34,197,94':a.prediction_source==='pgaa'?'251,191,36':a.prediction_source==='pgaa_hybrid'?'234,179,8':'14,165,233';
+      const time=new Date(a.alert_sent_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+      const details=typeof a.alert_details==='string'?JSON.parse(a.alert_details):a.alert_details||{};
+
+      return `<tr>
+        <td style="font-size:11px;color:var(--muted)">#${a.tx_id}</td>
+        <td><span style="background:rgba(${sourceRgba},.12);color:${sourceColor};padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700">${sourceLabel}</span></td>
+        <td><span style="color:${severityColor};font-size:11px;font-weight:700">${severityEmoji} ${a.alert_severity.toUpperCase()}</span></td>
+        <td style="text-align:right;font-weight:700;color:var(--red)">${(parseFloat(a.fraud_probability)||0).toFixed(3)}</td>
+        <td style="text-align:right;font-weight:700;color:var(--amber)">${details.ttdf_milliseconds||'—'}ms</td>
+        <td style="text-align:right;font-weight:700;color:var(--red)">$${(parseFloat(a.amount)||0).toFixed(2)}</td>
+        <td style="font-size:11px;color:var(--muted)">${time}</td>
+      </tr>`;
+    }).join('');
+
+  }catch(e){
+    console.log('ML alerts error:',e.message);
+  }
+}
+
+// ── UNIFIED FRAUD DETECTION (Rules + ML) ──────────────────
+let fdInited=false;
+let fdCharts={};
+let oltpLatencyHistory=[];  // Store OLTP latency readings for the chart
+
+function initFDCharts(){
+  if(fdInited)return;fdInited=true;
+  const co={responsive:true,animation:{duration:300},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:10}}}}};
+
+  // TTDF line chart with dual Y-axis (TTDF left, OLTP latency right)
+  fdCharts.ttdf=mkChart('fdTtdfChart','line',{labels:[],datasets:[
+    {label:'Kafka ML',data:[],borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,.1)',borderWidth:2,fill:false,tension:0.3,pointRadius:2,yAxisID:'y'},
+    {label:'ClickHouse ML',data:[],borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,.1)',borderWidth:2,fill:false,tension:0.3,pointRadius:2,yAxisID:'y'},
+    {label:'RisingWave ML',data:[],borderColor:'#a855f7',backgroundColor:'rgba(168,85,247,.1)',borderWidth:2,fill:false,tension:0.3,pointRadius:2,yAxisID:'y'},
+    {label:'PGAA',data:[],borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,.1)',borderWidth:2,fill:false,tension:0.3,pointRadius:2,yAxisID:'y'},
+    {label:'OLTP Insert',data:[],borderColor:'rgba(255,255,255,.6)',backgroundColor:'rgba(255,255,255,.05)',borderWidth:2,borderDash:[5,5],fill:true,tension:0.3,pointRadius:1,yAxisID:'y1'}
+  ]},{scales:{x:{ticks:{color:'#8b949e',font:{size:9}},grid:{display:false}},y:{type:'linear',position:'left',beginAtZero:true,suggestedMax:3000,title:{display:true,text:'TTDF (ms)',color:'#8b949e',font:{size:10}},ticks:{color:'#8b949e',font:{size:9},callback:v=>v+'ms'},grid:{color:'rgba(48,54,61,.4)'}},y1:{type:'linear',position:'right',beginAtZero:true,suggestedMax:100,title:{display:true,text:'OLTP Latency (ms)',color:'#8b949e',font:{size:10}},ticks:{color:'#8b949e',font:{size:9},callback:v=>v+'ms'},grid:{display:false}}},plugins:{legend:{display:true,position:'top',labels:{color:'#8b949e',font:{size:10}}}}});
+}
+
+async function loadFraud(){
+  initFDCharts();
+  await Promise.all([loadFraudMetrics(),loadFraudUnified(),loadFraudServiceStatus(),loadOltpMetrics()]);
+}
+
+async function loadOltpMetrics(){
+  try{
+    const d=await chGet('/api/oltp/metrics');
+    if(!d.ok)return;
+
+    // INSERT latency (transaction commit time)
+    const insertLat=d.insertLatencyMs||0;
+    g('oltpInsertLatency').textContent=insertLat+'ms';
+
+    // Store for chart (keep last 20 readings)
+    oltpLatencyHistory.push(insertLat);
+    if(oltpLatencyHistory.length>20) oltpLatencyHistory.shift();
+    g('oltpInsertLatency').style.color=insertLat<20?'var(--green)':insertLat<100?'var(--amber)':'var(--red)';
+
+    // Pending inserts
+    const pending=d.pendingOperations?.inserts||0;
+    g('oltpPendingInserts').textContent=pending;
+    g('oltpPendingInserts').style.color=pending===0?'var(--green)':pending<3?'var(--amber)':'var(--red)';
+
+    // TPS
+    g('oltpTps').textContent=d.throughput?.tps_1min||'0';
+
+    // Recent TX count
+    g('oltpRecentTx').textContent=d.commitDelay?.recentTxCount||'0';
+
+    // Active connections
+    const active=parseInt(d.connections?.active_queries||0);
+    g('oltpActiveConn').textContent=active;
+    g('oltpActiveConn').style.color=active<5?'var(--green)':active<10?'var(--amber)':'var(--red)';
+
+    // Cache hit ratio
+    const cacheHit=parseFloat(d.cacheHitRatio||0);
+    g('oltpCacheHit').textContent=cacheHit.toFixed(1)+'%';
+    g('oltpCacheHit').style.color=cacheHit>95?'var(--green)':cacheHit>80?'var(--amber)':'var(--red)';
+
+    // Lock waits
+    const lockWaits=d.waitingOnLocks||0;
+    g('oltpLockWait').textContent=lockWaits;
+    g('oltpLockWait').style.color=lockWaits===0?'var(--green)':'var(--red)';
+
+  }catch(e){console.log('OLTP metrics error:',e.message);}
+}
+
+async function loadFraudServiceStatus(){
+  try{
+    const d=await chGet('/api/ml/status');
+    if(!d.ok)return;
+
+    // Update dot indicators
+    setDot('fdKafkaDot',d.services?.mlInference?.running);
+    setDot('fdChDot',d.services?.mlInference?.running);
+    setDot('fdRwDot',d.services?.mlInference?.running);
+    setDot('fdRulesDot',true); // Rules are always active
+
+  }catch(e){console.log('Fraud service status error:',e.message);}
+
+  // Load inference container status for toggles
+  try{
+    const r=await fetch(API+'/api/inference/status');
+    const d=await r.json();
+    if(d.ok && d.services){
+      const svc=d.services;
+      if(g('toggleKafka'))g('toggleKafka').checked=svc.kafka?.running||false;
+      if(g('toggleClickhouse'))g('toggleClickhouse').checked=svc.clickhouse?.running||false;
+      if(g('toggleRisingwave'))g('toggleRisingwave').checked=svc.risingwave?.running||false;
+      if(g('togglePgaa'))g('togglePgaa').checked=svc.pgaa?.running||false;
+      setDot('fdKafkaDot',svc.kafka?.running);
+      setDot('fdChDot',svc.clickhouse?.running);
+      setDot('fdRwDot',svc.risingwave?.running);
+      setDot('fdPgaaDot',svc.pgaa?.running);
+    }
+  }catch(e){console.log('Inference status error:',e.message);}
+}
+
+// Toggle inference service start/stop
+async function toggleInference(service,start){
+  const action=start?'start':'stop';
+  const tog=g('toggle'+service.charAt(0).toUpperCase()+service.slice(1).replace('_h','H'));
+  if(tog)tog.disabled=true;
+  try{
+    const r=await fetch(API+`/api/inference/${service}/${action}`,{method:'POST'});
+    const d=await r.json();
+    if(d.ok){
+      toast(`${service} ${action}ed`,'ti');
+      setTimeout(loadFraudServiceStatus,1500);
+    }else{
+      toast(`Failed: ${d.error}`,'te');
+      if(tog)tog.checked=!start;
+    }
+  }catch(e){
+    toast(`Error: ${e.message}`,'te');
+    if(tog)tog.checked=!start;
+  }
+  if(tog)tog.disabled=false;
+}
+
+async function loadFraudMetrics(){
+  try{
+    const d=await chGet('/api/ml/metrics');
+    if(!d.ok)return;
+
+    // Rules-based metrics (from transaction stats)
+    const rulesTotal=d.totalTransactions||0;
+    const rulesFraud=d.fraudByRules||0;
+    g('fdRulesStatus').textContent='Active';
+    g('fdRulesTotal').textContent=rulesTotal.toLocaleString();
+    g('fdRulesFraud').textContent=rulesFraud.toLocaleString();
+    g('fdRulesTtdf').textContent=d.rulebased?.avgTtdf?`${d.rulebased.avgTtdf.toFixed(1)}ms`:'—';
+    g('fdRulesActive').textContent=d.activeRules||15;
+
+    // Kafka ML metrics
+    if(d.kafka){
+      const k=d.kafka;
+      g('fdKafkaStatus').textContent=k.totalPredictions>0?'Active':'Pending';
+      g('fdKafkaTotal').textContent=(k.totalPredictions||0).toLocaleString();
+      g('fdKafkaFraud').textContent=(k.fraudDetected||0).toLocaleString();
+      g('fdKafkaTtdf').textContent=k.avgTtdf?`${k.avgTtdf.toFixed(0)}ms`:'—';
+      g('fdKafkaP95').textContent=k.p95Ttdf?`${k.p95Ttdf.toFixed(0)}ms`:'—';
+    }
+
+    // ClickHouse ML metrics
+    if(d.clickhouse){
+      const c=d.clickhouse;
+      g('fdChStatus').textContent=c.totalPredictions>0?'Active':'Pending';
+      g('fdChTotal').textContent=(c.totalPredictions||0).toLocaleString();
+      g('fdChFraud').textContent=(c.fraudDetected||0).toLocaleString();
+      g('fdChTtdf').textContent=c.avgTtdf?`${c.avgTtdf.toFixed(0)}ms`:'—';
+      g('fdChP95').textContent=c.p95Ttdf?`${c.p95Ttdf.toFixed(0)}ms`:'—';
+    }
+
+    // RisingWave ML metrics
+    if(d.risingwave){
+      const r=d.risingwave;
+      g('fdRwStatus').textContent=r.totalPredictions>0?'Active':'Pending';
+      g('fdRwTotal').textContent=(r.totalPredictions||0).toLocaleString();
+      g('fdRwFraud').textContent=(r.fraudDetected||0).toLocaleString();
+      g('fdRwTtdf').textContent=r.avgTtdf?`${r.avgTtdf.toFixed(0)}ms`:'—';
+      g('fdRwP95').textContent=r.p95Ttdf?`${r.p95Ttdf.toFixed(0)}ms`:'—';
+    }
+
+    // PGAA ML metrics (Iceberg)
+    if(d.pgaa){
+      const p=d.pgaa;
+      g('fdPgaaStatus').textContent=p.totalPredictions>0?'Active':'Pending';
+      g('fdPgaaTotal').textContent=(p.totalPredictions||0).toLocaleString();
+      g('fdPgaaFraud').textContent=(p.fraudDetected||0).toLocaleString();
+      g('fdPgaaTtdf').textContent=p.avgTtdf?`${p.avgTtdf.toFixed(0)}ms`:'—';
+      g('fdPgaaP95').textContent=p.p95Ttdf?`${p.p95Ttdf.toFixed(0)}ms`:'—';
+    }
+    setDot('fdPgaaDot',d.pgaa?.totalPredictions>0);
+
+    // Update TTDF chart
+    if(d.ttdfHistory&&fdCharts.ttdf){
+      const labels=d.ttdfHistory.map(p=>new Date(p.timestamp).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}));
+      const kafkaData=d.ttdfHistory.map(p=>p.kafka_ttdf?Number(p.kafka_ttdf):null);
+      const chData=d.ttdfHistory.map(p=>p.ch_ttdf?Number(p.ch_ttdf):null);
+      const rwData=d.ttdfHistory.map(p=>p.rw_ttdf?Number(p.rw_ttdf):null);
+      const pgaaData=d.ttdfHistory.map(p=>p.pgaa_ttdf?Number(p.pgaa_ttdf):null);
+
+      // Pad OLTP latency history to match ttdfHistory length
+      const oltpPadded=[...Array(Math.max(0,labels.length-oltpLatencyHistory.length)).fill(null),...oltpLatencyHistory];
+
+      fdCharts.ttdf.data.labels=labels.slice(-20);
+      fdCharts.ttdf.data.datasets[0].data=kafkaData.slice(-20);      // Kafka (green)
+      fdCharts.ttdf.data.datasets[1].data=chData.slice(-20);         // ClickHouse (blue)
+      fdCharts.ttdf.data.datasets[2].data=rwData.slice(-20);         // RisingWave (purple)
+      fdCharts.ttdf.data.datasets[3].data=pgaaData.slice(-20);       // PGAA (yellow)
+      fdCharts.ttdf.data.datasets[4].data=oltpPadded.slice(-20);     // OLTP Insert (white dashed, right axis)
+      fdCharts.ttdf.update('none');
+    }
+
+  }catch(e){console.log('Fraud metrics error:',e.message);}
+}
+
+// SYNC NOW - Set sync point for fair comparison
+async function syncNow(){
+  const statusEl=g('syncStatus');
+  if(statusEl)statusEl.textContent='Syncing...';
+
+  try{
+    const d=await fetch('/api/ml/sync-now',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(r=>r.json());
+    if(!d.ok){
+      if(statusEl){
+        statusEl.textContent=d.error||'Failed';
+        statusEl.style.color='var(--red)';
+      }
+      return;
+    }
+
+    const sp=d.syncPoint;
+    if(statusEl){
+      statusEl.textContent=`Synced @ TX #${sp.cutoffTxId}`;
+      statusEl.style.color='var(--green)';
+    }
+
+    // Update top-level session stats display (IDs: v0=total, v1=volume, v2=fraud, v3=avg, d0=session count)
+    g('v0').textContent=sp.syncedTransactions.toLocaleString();
+    g('d0').textContent=`synced: ${sp.syncedTransactions}`;
+    g('v1').textContent='$'+sp.syncedVolume.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    g('v2').textContent=sp.syncedFraud;
+    if(sp.syncedTransactions>0){
+      g('v3').textContent='$'+(sp.syncedVolume/sp.syncedTransactions).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    // Refresh all fraud detection tiles
+    await loadFraud();
+
+    console.log(`[Sync Now] Set sync point to tx_id ${sp.cutoffTxId}, ${sp.engineCount} engines: ${sp.engines.join(', ')}`);
+  }catch(e){
+    console.error('Sync now error:',e);
+    if(statusEl){
+      statusEl.textContent='Error: '+e.message;
+      statusEl.style.color='var(--red)';
+    }
+  }
+}
+
+async function loadFraudUnified(){
+  const filterVal=g('fdUnifiedFilter')?.value||'all_fraud';
+  try{
+    // Map filter to API filter
+    let apiFilter=filterVal;
+    if(filterVal==='all_fraud')apiFilter='fraud';
+    if(filterVal==='all_predictions')apiFilter='all';
+
+    const params=new URLSearchParams({limit:50,filter:apiFilter});
+    const d=await chGet('/api/ml/predictions?'+params);
+    if(!d.ok||!d.predictions)return;
+
+    const counter=g('fdUnifiedCount');
+    if(counter)counter.textContent=`${d.predictions.length} results`;
+
+    const tbody=g('fdUnifiedBody');
+    if(!tbody)return;
+
+    if(d.predictions.length===0){
+      tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--muted)"><div class="eico" style="font-size:24px">⏳</div>No results found</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML=d.predictions.map(p=>{
+      const source=p.prediction_source||'rules';
+      const sourceLabel=source==='kafka'?'Kafka':(source==='clickhouse'?'CH':(source==='risingwave'?'RW':'Rules'));
+      const sourceBadge=source==='kafka'?'kafka':(source==='clickhouse'?'ch':(source==='risingwave'?'rw':'rule'));
+      const mlScore=p.fraud_probability?`${(parseFloat(p.fraud_probability)*100).toFixed(1)}%`:'—';
+      const mlPred=p.is_fraud?'<span style="color:var(--red);font-weight:700">FRAUD</span>':'<span style="color:var(--green)">SAFE</span>';
+      const rulePred=p.rule_based_fraud?'<span style="color:var(--red);font-weight:700">FRAUD</span>':'<span style="color:var(--green)">SAFE</span>';
+      const agreement=(p.is_fraud===p.rule_based_fraud)?'<span style="color:var(--green)">✓</span>':'<span style="color:var(--amber)">✗</span>';
+      const ttdf=p.ttdf_milliseconds?`${p.ttdf_milliseconds}ms`:'—';
+      const time=new Date(p.created_at||p.predicted_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+
+      // Get customer name from prediction data (if available)
+      const customerName=p.customer_name||'—';
+
+      return `<tr style="${p.is_fraud||p.rule_based_fraud?'background:rgba(239,68,68,.03)':''}">
+        <td style="font-size:11px;color:var(--muted)">#${p.tx_id}</td>
+        <td><span class="fraud-alert-badge ${sourceBadge}">${sourceLabel}</span></td>
+        <td style="font-weight:600;font-size:11px">${customerName}</td>
+        <td style="font-size:11px">${p.merchant||'—'}</td>
+        <td style="text-align:right;font-weight:600">$${(parseFloat(p.amount)||0).toFixed(2)}</td>
+        <td style="text-align:right;font-weight:700;font-size:11px">${mlScore}</td>
+        <td style="font-size:11px">${mlPred}</td>
+        <td style="font-size:11px">${rulePred}</td>
+        <td style="text-align:center;font-size:14px">${agreement}</td>
+        <td style="text-align:right;font-size:10px;color:var(--muted)">${ttdf}</td>
+        <td style="font-size:11px;color:var(--muted)">${time}</td>
+      </tr>`;
+    }).join('');
+
+  }catch(e){console.log('Fraud unified error:',e.message);}
+}
+
+// ── SEARCH ─────────────────────────────────────────────────
+async function doSearch(){
+  const p=new URLSearchParams({q:g('sq').value.trim(),type:g('ft').value,category:g('fc').value,fraud:g('ff').value,amtMin:g('fa').value,amtMax:g('fb').value,limit:g('fl').value});
+  g('sres').innerHTML='<div class="empty"><div class="eico">⏳</div><div>Searching PostgreSQL...</div></div>';
+  try{
+    const r=await fetch(API+'/api/search?'+p),d=await r.json();
+    if(!d.ok)throw new Error(d.error);
+    g('sbadge').style.display='flex';g('scount').textContent=`${d.count} result${d.count!==1?'s':''}`;
+    if(!d.rows.length){g('sres').innerHTML='<div class="empty"><div class="eico">🔍</div><div>No results</div></div>';return;}
+    let h=`<div style="overflow-x:auto"><table class="stable"><thead><tr><th>TX ID</th><th>Customer</th><th>Type</th><th>Merchant</th><th>Category</th><th>Remarks</th><th style="text-align:right">Amount</th><th>Date</th></tr></thead><tbody>`;
+    d.rows.forEach(r=>{const isD=['DEBIT','TRANSFER','PAYMENT'].includes(r.type);const dt=new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
+    h+=`<tr class="${r.is_fraud?'fr':''}"><td style="color:var(--muted);font-size:11px">#${r.tx_id}</td><td><div style="font-weight:700;font-size:12px">${r.customer_name||'—'}</div><div style="color:var(--muted);font-size:10px">${r.account_id}</div></td><td><span class="txb ${r.type}">${r.type}</span></td><td style="font-size:12px">${r.merchant||'—'}</td><td style="font-size:11px;color:var(--muted)">${r.category||'—'}</td><td><div class="rmk">${r.is_fraud?'<span style="color:var(--red);font-weight:700">⚠ FRAUD</span> ':''}${r.remarks||''}</div>${r.fraud_reason?`<div style="color:var(--red);font-size:11px">⚑ ${r.fraud_reason}</div>`:''}</td><td style="text-align:right;font-weight:700;font-size:13px;${isD?'color:var(--red)':'color:var(--green)'}">${isD?'-':'+'}${fU(r.amount)}</td><td style="color:var(--muted);font-size:11px;white-space:nowrap">${dt}</td></tr>`;});
+    g('sres').innerHTML=h+'</tbody></table></div>';
+  }catch(e){g('sres').innerHTML=`<div class="empty"><div class="eico">⚠</div><div style="color:var(--red)">${e.message}</div></div>`;}
+}
+function clearSearch(){g('sq').value='';['ft','fc','ff'].forEach(id=>g(id).selectedIndex=0);g('fl').value='50';g('fa').value='';g('fb').value='';g('sbadge').style.display='none';g('sres').innerHTML='<div class="empty"><div class="eico">🔍</div><div>Search transactions in PostgreSQL</div></div>';}
+
+// ── AUTO-INIT CHECK ────────────────────────────────────────
+async function checkAutoInit(){
+  try{
+    const r=await fetch(API+'/api/analytics/status');
+    const d=await r.json();
+    const txCount = d.ch?.rowsInPG || 0;
+    if(d.ok && txCount > 0){
+      // System already has data, skip to phase 2
+      console.log('Auto-init: Found',txCount,'transactions, skipping to phase 2');
+      toPhase2();
+      openWS();
+
+      // Reconcile button state with current sim state — covers the case where
+      // user clicks pipeline's "Start Synthetic Data" first, then opens Bank App.
+      // /api/health returns the live simRunning flag; if running, jump straight
+      // to ⏸ Pause UI rather than ▶ Start.
+      try{
+        const h=await fetch(API+'/api/health').then(r=>r.json());
+        if(h && h.simRunning){
+          console.log('[Auto-init] sim already running on server — switching to Live');
+          uiLive();
+        }
+      }catch(_){}
+
+
+      // Load existing data into dashboard
+      console.log('[Auto-init] Loading data and enabling controls...');
+
+      // Enable pause button as start button immediately
+      const pauseBtn=g('pauseBtn');
+      const stopBtn=g('stopBtn');
+      if(pauseBtn){
+        console.log('[Auto-init] Setting up Start button');
+        pauseBtn.textContent='▶ Start';
+        pauseBtn.className='btn btn-g';
+        pauseBtn.removeAttribute('disabled');
+        stopBtn.setAttribute('disabled',''); // Disable stop until started
+
+        pauseBtn.onclick=async ()=>{
+          console.log('[Auto-init] Start button clicked');
+          pauseBtn.setAttribute('disabled','');
+          pauseBtn.textContent='Starting...';
+
+          // Start simulation without recreating data
+          const simConfig={
+            txTypes:['CREDIT','DEBIT','TRANSFER','PAYMENT'],
+            fraudMode:'realistic',
+            intervalMs:1000
+          };
+          try{
+            const r=await fetch(API+'/api/sim/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(simConfig)});
+            const d=await r.json();
+            if(d.ok){
+              uiLive();
+              toast('▶ Simulation started','ts');
+              // Restore pause functionality
+              pauseBtn.onclick=doPause;
+            }else{
+              toast('Failed to start: '+(d.error||d.message),'te');
+              pauseBtn.removeAttribute('disabled');
+              pauseBtn.textContent='▶ Start';
+            }
+          }catch(e){
+            console.error('[Auto-init] Start error:',e);
+            toast('Failed to start simulation','te');
+            pauseBtn.removeAttribute('disabled');
+            pauseBtn.textContent='▶ Start';
+          }
+        };
+      }else{
+        console.error('[Auto-init] pauseBtn not found!');
+      }
+
+      // Load data after a short delay
+      setTimeout(async ()=>{
+        try{
+          console.log('[Auto-init] Loading stats...');
+          // Load stats
+          const stats=await fetch(API+'/api/analytics/summary').then(r=>r.json());
+          if(stats.ok&&stats.data){
+            g('v0').textContent=fN(stats.data.total_tx||0);
+            g('d0').textContent=`total: ${fN(stats.data.total_tx||0)}`;
+            g('v1').textContent=fBig(stats.data.total_volume||0);
+            g('v2').textContent=fN(stats.data.fraud_count||0);
+            g('v3').textContent=fU(stats.data.avg_tx_amount||0);
+            sessionStats.total=stats.data.total_tx||0;
+            sessionStats.volume=stats.data.total_volume||0;
+            sessionStats.fraud=stats.data.fraud_count||0;
+          }
+
+          console.log('[Auto-init] Loading bar chart...');
+          // Load dashboard bar chart (transaction breakdown)
+          const typeData=await fetch(API+'/api/analytics/by-type').then(r=>r.json());
+          if(typeData.ok&&typeData.data){
+            const m={};
+            typeData.data.forEach(r=>m[r.type]=parseInt(r.tx_count)||0);
+            if(window.barChart){
+              barChart.data.datasets[0].data=['CREDIT','DEBIT','TRANSFER','PAYMENT'].map(t=>m[t]||0);
+              barChart.update();
+            }
+          }
+
+          console.log('[Auto-init] Loading analytics...');
+          // Load analytics charts
+          loadAnType();
+          loadAnMerchants();
+          loadAnCustomers();
+
+          toast('✓ Loaded existing data - Click "▶ Start" to begin simulation','ts');
+          console.log('[Auto-init] Data load complete');
+        }catch(e){
+          console.error('[Auto-init] Data load error:',e);
+        }
+      },1000);
+    }else{
+      console.log('Auto-init: No data found, staying on setup phase');
+    }
+  }catch(e){
+    // No connection or no data, stay on phase 1
+    console.log('Auto-init check failed:', e.message);
+  }
+}
+
+// Run auto-init check on page load
+// Strategy: (1) ensure server-side auto-connect (handles race vs pgd healthy),
+// (2) loop checkAutoInit until Phase 2 is reached, (3) also independently
+// check /api/health every iteration — if simRunning is true, jump to Live
+// state even if the data check hasn't fully transitioned yet.
+async function bootAutoInit(){
+  try{ await fetch(API+'/api/auto-connect',{method:'POST'}); }catch(_){}
+  for(let i=0;i<15;i++){
+    await checkAutoInit();
+    // Independent live-state check — useful when iframe opens AFTER sim
+    // was already started from elsewhere (e.g. workspace's button).
+    try{
+      const h = await fetch(API+'/api/health').then(r=>r.json());
+      if(h && h.simRunning){
+        if(g('ph2') && !g('ph2').classList.contains('on')) toPhase2();
+        if(typeof openWS === 'function') try{ openWS(); }catch(_){}
+        if(typeof uiLive === 'function') uiLive();
+      }
+    }catch(_){}
+    if(g('ph2') && g('ph2').classList.contains('on')) return;
+    await new Promise(r=>setTimeout(r,1000));
+  }
+}
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',function(){bootAutoInit();if(location.hash==='#phase2')toPhase2()});
+}else{
+  bootAutoInit();if(location.hash==='#phase2')toPhase2();
+}
+</script>
+</body>
+</html>
