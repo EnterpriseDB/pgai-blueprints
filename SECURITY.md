@@ -8,31 +8,30 @@ This document describes the security measures implemented in EDB Postgres® AI B
 
 ### 1. Command Execution Protection
 
-The chat agent restricts command execution to a whitelist of safe Docker commands:
+The chat agent does not enforce a command whitelist. Its `run_command` tool (`engine/agent/agent.py`) passes the string it receives straight to the shell via `subprocess.run(cmd, shell=True)`. The tool description suggests it is limited to Docker commands, but that is advisory only and does not constrain what runs — anyone who can reach the agent can run arbitrary shell commands on the host.
 
-- `docker compose` (up, down, etc.)
-- `docker ps`
-- `docker logs`
-- `docker exec`
-- `docker stats`
-- `docker inspect`
+This is acceptable only under the trusted-host assumption in the Threat Model: run it on your own machine, on a trusted network or behind a VPN, never on a shared or internet-facing host.
 
-Arbitrary shell commands are blocked to prevent command injection attacks.
+**Mitigation:** restrict network access to the agent. For genuine enforcement, replace the free-form `run_command` tool with structured deploy/destroy/logs actions that build the Docker command server-side, rather than filtering shell
+strings after the fact.
 
 ### 2. API Authentication
 
-Critical endpoints are protected with API key authentication:
+All \/api/*` endpoints except `/api/health` are protected with API key authentication:
 
 | Endpoint | Protection | Description |
 |----------|------------|-------------|
 | `/api/exit` | API Key Required | Stops all containers and shuts down agent |
 | `/api/reset` | API Key Required | Resets chat history |
-| `/api/chat` | Public | Chat functionality |
-| `/api/stacks` | Public | List available stacks |
+| `/api/chat` | API Key Required | Chat functionality |
+| `/api/stacks` | API Key Required | List available stacks |
+| `/api/health` | Public | Health check (the only unauthenticated route) |
 
 The API key is:
 - Auto-generated on startup (printed to console)
 - Or set via `AGENT_API_KEY` environment variable
+
+**Scope limit:** this guard is HTTP-only and does not cover the WebSocket endpoints. `/ws/terminal` opens a shell into containers without an API key (it validates the container name, not the caller). The shipped UI also does not send an `Authorization` header on its `/api/*` calls, so the key must be supplied by a reverse proxy or run configuration.
 
 ### 3. Input Validation
 
@@ -44,12 +43,11 @@ All user inputs are validated using Pydantic models:
 
 ### 4. CORS Protection
 
-Cross-Origin Resource Sharing is restricted to localhost:
+The agent application (`engine/agent/app.py`) does not register any CORS middleware, and the SynthDB API (`engine/synthdb/api.py`) is configured with `allow_origins=["*"]`, which accepts requests from any origin.
 
-- `http://localhost:4000`
-- `http://127.0.0.1:4000`
-- `http://localhost:3000` (PeerDB UI)
-- `http://127.0.0.1:3000`
+In the shipped setup this carries little practical risk: browsers never call the SynthDB service directly. UI requests go to `/api/synthdb/*` on the agent, which proxies to SynthDB server-side, so the permissive policy is not reachable from a browser. It should still be tightened as a matter of hygiene.
+
+**Mitigation:** keep all services bound to localhost. To enforce origin restrictions, add `CORSMiddleware` to `app.py` and replace the wildcard in `synthdb/api.py` with an explicit allow-list (for example, `http://127.0.0.1:4000`).
 
 ### 5. Network Security
 

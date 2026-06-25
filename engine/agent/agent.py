@@ -5,7 +5,7 @@ Auto-detects Anthropic direct API or AWS Bedrock.
 For demonstration purposes only.
 """
 
-pgai_version = "v0.1rc3"
+pgai_version = "v0.1rc7"
 
 import os
 import sys
@@ -407,8 +407,51 @@ After building, just confirm and remind to deploy. No connection details until a
             }
         }]
 
+    # ---------------------------------------------------------------------------
+    # Allowlist — only these command prefixes are permitted through run_command.
+    # This makes the SECURITY.md §1 claim true in code, not just documentation.
+    # ---------------------------------------------------------------------------
+    _CMD_ALLOWLIST = (
+        "docker compose ",
+        "docker-compose ",
+        "docker ps",
+        "docker logs",
+        "docker exec",
+        "docker stats",
+        "docker inspect",
+        "docker images",
+        "docker network",
+        "docker volume",
+        "docker info",
+        "cd ",    # always paired with docker compose, e.g. cd stacks/foo && docker compose up
+        "make ",  # Makefile targets that forward to docker compose
+    )
+
+    def _is_allowed_command(self, cmd: str) -> bool:
+        """
+        Validate every &&/;/|-separated segment against the allowlist.
+        Returns False (and logs a warning) if any segment is not permitted.
+        """
+        import re as _re
+        segments = _re.split(r"&&|;|\|", cmd.strip())
+        for seg in segments:
+            seg = seg.strip()
+            if not seg:
+                continue
+            if not any(seg.startswith(prefix) for prefix in self._CMD_ALLOWLIST):
+                logger.warning("[CMD] BLOCKED (not in allowlist): %s", seg[:120])
+                return False
+        return True
+
     def run_command(self, cmd):
         logger.info("[CMD] %s", cmd[:150])
+        # Security: reject anything outside the allowlist before touching the shell
+        if not self._is_allowed_command(cmd):
+            return (
+                "ERROR: Command blocked by security allowlist. "
+                "Only docker compose / docker ps / docker logs / docker exec / "
+                "docker stats / docker inspect are permitted."
+            )
         try:
             result = subprocess.run(
                 cmd, shell=True, capture_output=True, text=True,

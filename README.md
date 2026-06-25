@@ -1,4 +1,4 @@
-# EDB Postgres® AI Blueprints v0.1rc1
+# EDB Postgres® AI Blueprints v0.1rc7
 
 *For demonstration purposes only.*
 

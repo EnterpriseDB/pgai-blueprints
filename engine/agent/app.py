@@ -6,10 +6,11 @@ Port 4000 (PeerDB uses 3000).
 For demonstration purposes only.
 """
 
-pgai_version = "0.1rc3"
+pgai_version = "0.1rc7"
 
 import os
 import json
+import hmac
 import logging
 import logging.handlers
 import uvicorn
@@ -38,6 +39,53 @@ app = FastAPI(title="EDB Postgres® AI Blueprints", version=pgai_version)
 agent = LabAgent()
 _start_time = datetime.now()
 _last_activity = datetime.now()
+
+# Paths under /api/* that stay open (no API key required).
+_AUTH_EXEMPT_PATHS = {"/api/health"}
+
+
+@app.middleware("http")
+async def _agent_api_key_auth(request: Request, call_next):
+    """Require `Authorization: Bearer <AGENT_API_KEY>` on the JSON API.
+
+    Only guards /api/* (except the health check). HTML UI pages, /assets, and
+    the WebSocket endpoints are intentionally left open — browser WebSockets
+    cannot send an Authorization header, so /ws/* is not gated here (HTTP
+    middleware never runs for the WebSocket scope anyway).
+
+    Fail closed: if AGENT_API_KEY is unset/empty the server refuses all
+    protected requests with 503 rather than serving them unauthenticated.
+    """
+    path = request.url.path
+    if path.startswith("/api/") and path not in _AUTH_EXEMPT_PATHS:
+        expected = os.environ.get("AGENT_API_KEY", "").strip()
+        if not expected:
+            return JSONResponse(
+                {"detail": "AGENT_API_KEY is not configured on the server"},
+                status_code=503,
+            )
+        scheme, _, token = request.headers.get("authorization", "").partition(" ")
+        if scheme.lower() != "bearer" or not hmac.compare_digest(token.strip(), expected):
+            return JSONResponse(
+                {"detail": "Invalid or missing API key"},
+                status_code=401,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    return await call_next(request)
+
+
+def _api_key_ok(token: str) -> bool:
+    """Constant-time check of a presented key against AGENT_API_KEY.
+
+    Fails closed: returns False when AGENT_API_KEY is unset/empty. Used by the
+    WebSocket endpoints, which cannot rely on the HTTP middleware (it never runs
+    for the WebSocket scope) and cannot receive an Authorization header — the
+    browser sends the key inside the first JSON frame instead.
+    """
+    expected = os.environ.get("AGENT_API_KEY", "").strip()
+    if not expected:
+        return False
+    return hmac.compare_digest((token or "").strip(), expected)
 
 
 @app.get("/api/health")
@@ -2178,6 +2226,10 @@ async def ws_logs(websocket: WebSocket):
     ws_id = id(websocket)
     try:
         start = await websocket.receive_json()
+        if not _api_key_ok(start.get("key", "")):
+            await websocket.send_json({"type": "error", "message": "Invalid or missing API key"})
+            await websocket.close(code=1008)
+            return
         if start.get("type") != "start":
             await websocket.send_json({"type": "error", "message": "Expected start frame"})
             return
@@ -2262,6 +2314,10 @@ async def ws_terminal(websocket: WebSocket):
 
     try:
         start_msg = await websocket.receive_json()
+        if not _api_key_ok(start_msg.get("key", "")):
+            await websocket.send_json({"type": "error", "message": "Invalid or missing API key"})
+            await websocket.close(code=1008)
+            return
         if start_msg.get("type") != "start":
             await websocket.send_json({"type": "error", "message": "Expected start message"})
             return
@@ -2401,7 +2457,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EDB Postgres® AI Blueprints v0.1rc3</title>
+<title>EDB Postgres® AI Blueprints v0.1rc7</title>
 <style>
 :root{--bg:#f5f6f8;--bg2:#fff;--bg3:#f8f9fb;--text:#1a1a2e;--text2:#333;--text3:#666;--muted:#888;--border:#e2e4e8;--border2:#eee;--accent:#4a90d9;--accent2:#3a7bc8;--header-bg:#1a1a2e;--header-text:#fff;--card-bg:#fff;--card-hover:#f0f8ff;--code-bg:#f0f2f5;--code-border:#e8eaed;--success:#28a745;--danger:#dc3545;--warning:#f0ad4e;--chat-user-bg:#e8f0fe;--chat-user-text:#1a1a2e;--chat-bot-bg:#fff;--chat-bot-text:#333;--input-bg:#fff;--input-border:#e2e4e8;--shadow:0 1px 3px rgba(0,0,0,.08)}
 [data-theme="dark"]{--bg:#1e1e1e;--bg2:#252526;--bg3:#2d2d2d;--text:#d4d4d4;--text2:#cccccc;--text3:#969696;--muted:#858585;--border:#3e3e3e;--border2:#333333;--accent:#569cd6;--accent2:#9cdcfe;--header-bg:#1a1a1a;--header-text:#d4d4d4;--card-bg:#2d2d2d;--card-hover:#333333;--code-bg:#1e1e1e;--code-border:#3e3e3e;--success:#6a9955;--danger:#f14c4c;--warning:#cca700;--chat-user-bg:#264f78;--chat-user-text:#ffffff;--chat-bot-bg:#2d2d2d;--chat-bot-text:#d4d4d4;--input-bg:#3c3c3c;--input-border:#3e3e3e;--shadow:0 2px 6px rgba(0,0,0,.35)}
@@ -3587,7 +3643,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <!-- Header -->
 <div class="hdr">
   <div class="hdr-left">
-    <h1>EDB Postgres® AI Blueprints</h1><span class="ver">v0.1rc3</span>
+    <h1>EDB Postgres® AI Blueprints</h1><span class="ver">v0.1rc7</span>
     <div class="running-bar" id="runningBar" style="display:none">
       <span class="dot"></span><span id="runningNames"></span><span class="slot" id="slotInfo"></span>
     </div>
@@ -3743,6 +3799,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.min.js"></script>
 <script>
+// ── API key auth ──────────────────────────────────────────────────────────
+// The agent's /api/* routes (and the /ws/* sockets) require AGENT_API_KEY.
+// The key is NEVER embedded in this page (that would hand it to any network
+// user who can load the UI); the operator enters it once and it is kept only
+// in this browser's localStorage, attached as a Bearer header on every /api/*
+// request and inside the first frame of each WebSocket.
+let _keyPromptCooldown=0;
+function _getApiKey(){ return (localStorage.getItem('diab-api-key')||'').trim(); }
+function _promptForApiKey(msg){
+  const now=Date.now();
+  if(now<_keyPromptCooldown) return _getApiKey();   // avoid prompt storms from pollers
+  _keyPromptCooldown=now+2000;
+  const k=window.prompt(msg||'Enter AGENT_API_KEY to use this agent:','');
+  if(k!==null && k.trim()) localStorage.setItem('diab-api-key',k.trim());
+  return _getApiKey();
+}
+(function(){
+  const _origFetch=window.fetch.bind(window);
+  window.fetch=function(input,init){
+    const url=(typeof input==='string')?input:((input&&input.url)||'');
+    const isApi=url.startsWith('/api/')||url.startsWith(location.origin+'/api/');
+    if(!isApi) return _origFetch(input,init);
+    init=init?Object.assign({},init):{};
+    const h=new Headers(init.headers||{});
+    const key=_getApiKey();
+    if(key && !h.has('Authorization')) h.set('Authorization','Bearer '+key);
+    init.headers=h;
+    return _origFetch(input,init).then(function(resp){
+      if(resp.status!==401) return resp;
+      const nk=_promptForApiKey('API key missing or rejected. Enter AGENT_API_KEY:');
+      if(!nk) return resp;
+      const h2=new Headers(init.headers||{}); h2.set('Authorization','Bearer '+nk);
+      return _origFetch(input,Object.assign({},init,{headers:h2}));
+    });
+  };
+  if(!_getApiKey()) _promptForApiKey();   // ask up front so the first poll is authenticated
+})();
 const chatEl=document.getElementById('chat'),inputEl=document.getElementById('input'),sendBtn=document.getElementById('sendBtn'),stopBtn=document.getElementById('stopBtn');
 let stackData={stacks:{},plugins:{}};
 let abortController=null;
@@ -6083,12 +6176,12 @@ async function loadUI(){
     // Welcome message
     if(!window._welcomeShown){
       window._welcomeShown=true;
-      addMsg('assistant','Welcome to **EDB Postgres® AI Blueprints v0.1rc3**\n\nPick an industry case to deploy, then switch to Workspace to run demo workflows.');
+      addMsg('assistant','Welcome to **EDB Postgres® AI Blueprints v0.1rc7**\n\nPick an industry case to deploy, then switch to Workspace to run demo workflows.');
     }
     refreshRunning();
   }catch(e){
     document.getElementById('tab-stacks').innerHTML='<p class="mon-empty">Could not load stacks</p>';
-    addMsg('assistant','Welcome to EDB Postgres® AI Blueprints vv0.1rc3. Type "deploy real-time-analytics" to get started.');
+    addMsg('assistant','Welcome to EDB Postgres® AI Blueprints vv0.1rc7. Type "deploy real-time-analytics" to get started.');
   }
 }
 
@@ -8222,7 +8315,7 @@ function selectLogContainer(name){
   const pauseBtn=document.getElementById('wsLogsPause'); if(pauseBtn) pauseBtn.textContent='Pause';
   const proto=location.protocol==='https:'?'wss:':'ws:';
   _logsWS=new WebSocket(proto+'//'+location.host+'/ws/logs');
-  _logsWS.onopen=()=>{ try{ _logsWS.send(JSON.stringify({type:'start',container:name,tail:500})); }catch(e){} };
+  _logsWS.onopen=()=>{ try{ _logsWS.send(JSON.stringify({type:'start',container:name,tail:500,key:_getApiKey()})); }catch(e){} };
   _logsWS.onmessage=(ev)=>{
     let text=ev.data;
     if(typeof text!=='string') return;
@@ -8642,7 +8735,7 @@ function wsDoConnect(key,stackName,serviceId,command,displayName,targetContainer
   ws.onopen=()=>{
     const cols=term.cols||120;
     const rows=term.rows||40;
-    ws.send(JSON.stringify({type:'start',stack:stackName,command:command,cols:cols,rows:rows,target_container:targetContainer||''}));
+    ws.send(JSON.stringify({type:'start',stack:stackName,command:command,cols:cols,rows:rows,target_container:targetContainer||'',key:_getApiKey()}));
   };
 
   ws.onmessage=(e)=>{
@@ -8725,4 +8818,4 @@ MONITORING_HTML = r"""<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Mo
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 4000))
     print(f"[app] Starting EDB Postgres® AI Blueprints v{pgai_version} on http://127.0.0.1:{port}")
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="127.0.0.1", port=port)

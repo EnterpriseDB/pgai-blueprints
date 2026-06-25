@@ -40,15 +40,15 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "8890:8890"   # Jupyter (iframe-safe)
-      - "5010:5010"   # MLflow (iframe-safe)
-      - "3010:3010"   # Metabase (iframe-safe)
-      - "7870:7870"   # LangFlow (iframe-safe)
-      - "9011:9011"   # MinIO Console (iframe-safe)
-      - "8130:8130"   # ClickHouse (iframe-safe)
-      - "5700:5700"   # RisingWave Dashboard (iframe-safe)
-      - "8190:8190"   # Lakekeeper (iframe-safe)
-      - "8898:8898"   # Airflow (iframe-safe, upstream optional — 502s until --profile airflow up)
+      - "127.0.0.1:8890:8890"   # Jupyter (iframe-safe)
+      - "127.0.0.1:5010:5010"   # MLflow (iframe-safe)
+      - "127.0.0.1:3010:3010"   # Metabase (iframe-safe)
+      - "127.0.0.1:7870:7870"   # LangFlow (iframe-safe)
+      - "127.0.0.1:9011:9011"   # MinIO Console (iframe-safe)
+      - "127.0.0.1:8130:8130"   # ClickHouse (iframe-safe)
+      - "127.0.0.1:5700:5700"   # RisingWave Dashboard (iframe-safe)
+      - "127.0.0.1:8190:8190"   # Lakekeeper (iframe-safe)
+      - "127.0.0.1:8898:8898"   # Airflow (iframe-safe, upstream optional — 502s until --profile airflow up)
     depends_on:
       - jupyter
       - mlflow
@@ -94,8 +94,12 @@ services:
       - ./scripts:/scripts:ro
       - ./tmp:/shared-tmp:rw
     ports:
-      - "7434:5432"
-      - "5445:5445"
+      - "127.0.0.1:7434:5432"
+      # TODO this port is not bound to an IP; we need to bind it to
+      # the public IP, to allow Postgres connections. And maybe we
+      # also need to investigate why "127.0.0.1" does not work and we
+      # need the public IP.
+      - "127.0.0.1:5445:5445"
     networks:
       - bfsi-network
     healthcheck:
@@ -118,7 +122,7 @@ services:
     profiles:
       - oltp
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./app/server.js:/app/server.js:ro
@@ -168,8 +172,8 @@ services:
       --store-directory /risingwave/data
       --prometheus-listener-addr 0.0.0.0:1250
     ports:
-      - "4574:4566"
-      - "5697:5691"
+      - "127.0.0.1:4574:4566"
+      - "127.0.0.1:5697:5691"
     volumes:
       - risingwave-data:/risingwave
     environment:
@@ -217,7 +221,7 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     ports:
-      - "9096:9092"
+      - "127.0.0.1:9096:9092"
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
       interval: 10s
@@ -236,7 +240,7 @@ services:
         limits:
           memory: 1g
     ports:
-      - "8084:8083"
+      - "127.0.0.1:8084:8083"
     environment:
       BOOTSTRAP_SERVERS: kafka:9092
       GROUP_ID: cb-connect
@@ -273,8 +277,8 @@ services:
       CLICKHOUSE_PASSWORD: admin123
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
     ports:
-      - "8125:8123"
-      - "9002:9000"
+      - "127.0.0.1:8125:8123"
+      - "127.0.0.1:9002:9000"
     volumes:
       - clickhouse-data:/var/lib/clickhouse
     ulimits:
@@ -385,7 +389,7 @@ services:
         limits:
           memory: 2g
     ports:
-      - "8889:8888"
+      - "127.0.0.1:8889:8888"
     environment:
       JUPYTER_TOKEN: databox
       JUPYTER_ENABLE_LAB: "yes"
@@ -700,7 +704,7 @@ services:
       - OPENAI_API_KEY=
       - LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=ANTHROPIC_API_KEY,ANTHROPIC_DEFAULT_MODEL,OLLAMA_BASE_URL,OLLAMA_MODEL,MLFLOW_TRACKING_URI
     ports:
-      - "7861:7860"
+      - "127.0.0.1:7861:7860"
     depends_on:
       pgd:
         condition: service_healthy
@@ -797,7 +801,7 @@ services:
         limits:
           memory: 1g
     ports:
-      - "5001:5000"
+      - "127.0.0.1:5001:5000"
     environment:
       # MLflow backend configuration
       MLFLOW_BACKEND_STORE_URI: postgresql://postgres:secret@pgd:5432/mlflow
@@ -879,7 +883,7 @@ services:
         limits:
           memory: 1g
     ports:
-      - "5002:5002"
+      - "127.0.0.1:5002:5002"
     environment:
       MLFLOW_TRACKING_URI: http://mlflow:5000
       AWS_ACCESS_KEY_ID: minioadmin
@@ -920,8 +924,8 @@ services:
         limits:
           memory: 512m
     ports:
-      - "9003:9000"
-      - "9004:9001"
+      - "127.0.0.1:9003:9000"
+      - "127.0.0.1:9004:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
@@ -999,7 +1003,7 @@ services:
         limits:
           memory: 1536m
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3002:3000"
     environment:
       MB_DB_TYPE: postgres
       MB_DB_HOST: pgd
@@ -1190,7 +1194,7 @@ services:
       RUST_LOG: info,lakekeeper=debug
     command: ["serve"]
     ports:
-      - "8181:8181"
+      - "127.0.0.1:8181:8181"
     healthcheck:
       test: ["CMD", "/home/nonroot/lakekeeper", "healthcheck"]
       interval: 5s
@@ -1413,7 +1417,7 @@ services:
       - ./airflow/dags:/opt/airflow/dags:ro
       - ./airflow/webserver_config.py:/opt/airflow/webserver_config.py:ro
     ports:
-      - "8888:8080"
+      - "127.0.0.1:8888:8080"
     command: webserver
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
