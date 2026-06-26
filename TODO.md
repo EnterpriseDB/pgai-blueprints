@@ -2,20 +2,14 @@
 
 There are 7 issues found by InfoSec:
 
- 1. Finding 1 - WIP - CRIT - (bind to 127.0.0.1)
+ 1. Finding 1 - DONE - CRIT - (bind to 127.0.0.1)
 
-    This is "Unauthenticated command execution via the chat agent"
-    composed of three separate facts:
+    [GC, MG, RR] This is "Unauthenticated command execution via the
+    chat agent" composed of three separate facts:
 
       - (a) Agent binds to 0.0.0.0
       - (b) API endpoints are not authenticated (Finding 2)
       - (c) run_command runs arbitrary shell (Finding 5)
-
-    (b) is done (Finding 2).
-    (c) is done (Finding 5).
-
-    Regarding (a), the solution is simple, but it still needs to be
-    tested.
 
  2. Finding 2 - DONE - CRIT - (unauthenticated API)
 
@@ -39,7 +33,9 @@ There are 7 issues found by InfoSec:
 
     [AG] Solution merged to the main branch.
 
- 6. Finding 6 - TODO - MED  - (empty .gitignore)
+ 6. Finding 6 - DONE - MED  - (empty .gitignore)
+
+    [GC] Solution merged to the public repo only, main branch.
 
     Not relevant as the git repo is used only as a way to publish
     code, to which we do not commit outside of code releases.

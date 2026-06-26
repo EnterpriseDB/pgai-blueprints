@@ -2,7 +2,7 @@
 
 *For demonstration purposes only.*
 
-A ready-to-deploy reference architecture demonstrating end-to-end integration between operational databases, analytics, AI, and real-time pipelines with industry-standard use cases.
+A reference architecture demonstrating end-to-end integration between operational databases, analytics, AI, and real-time pipelines with industry-standard use cases.
 
 This project provides a comprehensive proof-of-concept (PoC) environment that showcases the seamless integration between enterprise database systems and modern data analytics platforms. It demonstrates how organizations can leverage the power of EDB PG AI Platform alongside other components to build robust, scalable, and intelligent data solutions.
 
@@ -27,9 +27,9 @@ The active **BFSI Fraud Detection** stack exposes 6 progressive use cases. Each 
 
 ## Technology Stack
 
-Partner technologies that power the BFSI stack:
+Integrated technologies that power the BFSI stack:
 
-| Partner | Role | Status |
+| Technology | Role | Status |
 |---|---|---|
 | EDB Postgres Distributed (PGD + PGAA + AIDB) | OLTP + vector / AI extensions | ✓ Active |
 | RisingWave | Streaming SQL, materialized views | ✓ Active |
@@ -61,7 +61,7 @@ Stacks are **vendored as-is** — we never modify the upstream `docker-compose.y
 
 ## Supported Targets
 
-DIAB supports three deploy targets, selectable from the UI header dropdown.
+EDB Postgres® AI Blueprints supports three deploy targets, selectable from the UI header dropdown.
 
 ### Target 1 — Laptop · Docker Desktop (default)
 
@@ -107,7 +107,9 @@ Run all commands in the WSL2 shell. Some networks use a TLS proxy (e.g. **Netsko
 
 5. Then run **`make agent`**. Order matters: Bedrock auth first, then these variables, then the tool.
 
-If TLS errors persist, confirm the PEM matches what the browser trusts and that IT has approved the cert for API access. This is an environment-specific workaround, not a product requirement.
+   When the website asks for an `API_AGENT_KEY`, enter `agent123`.
+
+   If TLS errors persist, confirm the PEM matches what the browser trusts and that IT has approved the cert for API access. This is an environment-specific workaround, not a product requirement.
 
 **Steps**
 
@@ -170,7 +172,7 @@ In the UI: pick **Laptop · Colima** in the header dropdown → click **Deploy**
 
 ### Target 3 — Cloud · Northflank (BYOC)
 
-Production-grade option for shared / partner demos. Northflank provisions an EKS cluster in **your** AWS account and acts as the control plane; DIAB translates `docker-compose.yaml` into NF Services + Jobs + Secrets via the NF REST API. Currently NF-enabled stacks: `bfsi-fraud-detection`, `core-banking-simulator`, `sovereign-data-tier`.
+Production-grade option for shared / partner demos. Northflank provisions an EKS cluster in **your** AWS account and acts as the control plane; EDB Postgres® AI Blueprints translates `docker-compose.yaml` into NF Services + Jobs + Secrets via the NF REST API. Currently NF-enabled stacks: `bfsi-fraud-detection`, `core-banking-simulator`, `sovereign-data-tier`.
 
 **Pre-requisites**
 
@@ -305,7 +307,7 @@ When anything looks wrong, the one-liner rule is:
 make clean && make agent
 ```
 
-`make clean` is cross-runtime aware — it tears down compose projects on both Docker Desktop and Colima, frees diab ports, stops Colima if it was holding any port, and destroys NF stacks the agent is tracking. After it returns you can pick a different deploy target with zero leftover state.
+`make clean` is cross-runtime aware — it tears down compose projects on both Docker Desktop and Colima, frees ports, stops Colima if it was holding any port, and destroys NF stacks the agent is tracking. After it returns you can pick a different deploy target with zero leftover state.
 
 ### Quick Guide
 
@@ -401,7 +403,7 @@ The first paragraph stays visible; the numbered list collapses behind a "Show st
 ## Directory Structure
 
 ```
-databricks-in-a-box/
+pgai-blueprints/
   engine/
     agent/                # Chat agent (FastAPI + Claude / Bedrock)
       translators/        # Per-target deploy logic
