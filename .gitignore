@@ -1,2 +1,13 @@
 # Ignoring backup files
 *~
+
+# Preventing unwanted files in commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+certs/*
+!certs/README.md
+docker-compose.override.yaml
