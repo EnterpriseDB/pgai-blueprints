@@ -5,7 +5,7 @@ Auto-detects Anthropic direct API or AWS Bedrock.
 For demonstration purposes only.
 """
 
-pgai_version = "v0.1rc7"
+pgai_version = "v0.1rc8"
 
 import os
 import sys
@@ -425,6 +425,8 @@ After building, just confirm and remind to deploy. No connection details until a
         "docker info",
         "cd ",    # always paired with docker compose, e.g. cd stacks/foo && docker compose up
         "make ",  # Makefile targets that forward to docker compose
+        "grep ",
+        "for ", "do ", "true", "done"
     )
 
     def _is_allowed_command(self, cmd: str) -> bool:
