@@ -90,6 +90,22 @@ The BFSI Fraud Detection stack demonstrates a complete data platform for real-ti
 │  │  └──────────────────┘  └──────────────────┘  └──────────────────┘       │    │
 │  └─────────────────────────────────────────────────────────────────────────┘    │
 │                                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────┐    │
+│  │                       AIRFLOW PROFILE (opt-in)                          │    │
+│  ├─────────────────────────────────────────────────────────────────────────┤    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │    │
+│  │  │   Airflow   │  │   Airflow   │  │   Airflow   │  │   Airflow   │     │    │
+│  │  │  Webserver  │  │  Scheduler  │  │    Init     │  │  Postgres   │     │    │
+│  │  │    :8888    │  │             │  │             │  │             │     │    │
+│  │  │             │  │             │  │             │  │             │     │    │
+│  │  │ • UI / Auth │  │ • DAG Exec  │  │ • One-shot  │  │ • Metadata  │     │    │
+│  │  │ • Log View  │  │ • Triggers  │  │   bootstrap │  │   DB        │     │    │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘     │    │
+│  │                                                                         │    │
+│  │  DAG: fraud_reconciliation (every 2 min)                                │    │
+│  │  PGD ⇄ ClickHouse FINAL ⇄ RisingWave DISTINCT → diff_and_alert          │    │
+│  └─────────────────────────────────────────────────────────────────────────┘    │
+│                                                                                 │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -109,6 +125,7 @@ The BFSI Fraud Detection stack demonstrates a complete data platform for real-ti
 | **LangFlow**       | langflowai/langflow         | 7861       | Visual agent builder                    |
 | **Metabase**       | metabase/metabase           | 3002       | BI dashboards                           |
 | **Bank App**       | Node.js (custom)            | 3001       | Transaction simulator                   |
+| **Airflow**        | apache/airflow:2.10.4       | 8888       | Workflow orchestration (opt-in profile) |
 
 ---
 
@@ -195,6 +212,65 @@ The BFSI Fraud Detection stack demonstrates a complete data platform for real-ti
      │  • Thresholds  │ │  • Trends    │ │  • Investigation│
      └────────────────┘ └──────────────┘ └─────────────────┘
 ```
+
+### Auxiliary Flows (run alongside the main pipeline)
+
+**Hybrid Search (UC2 extension)**
+
+```
+                  ┌──────────────────────────┐
+                  │           PGD            │
+                  └─────────────┬────────────┘
+                                ▼
+                  ┌──────────────────────────┐
+                  │ transactions_hybrid_     │
+                  │        corpus            │
+                  └──────┬─────────────┬─────┘
+                         │             │
+                         ▼             ▼
+              ┌──────────────────┐  ┌──────────────────┐
+              │  VectorChord     │  │   AIDB BERT      │
+              │     BM25         │  │  encode_text     │
+              │   (lexical)      │  │   (semantic)     │
+              └────────┬─────────┘  └────────┬─────────┘
+                       │                     │
+                       └──────────┬──────────┘
+                                  ▼
+                        ┌──────────────────┐
+                        │   RRF fusion     │
+                        └────────┬─────────┘
+                                 ▼
+                        ┌──────────────────┐
+                        │     Metabase     │
+                        │ comparison cards │
+                        └──────────────────┘
+```
+
+**Drift Reconciliation (UC2 extension, opt-in Airflow profile)**
+
+```
+   ┌────────────┐   ┌────────────────┐   ┌───────────────────┐
+   │    PGD     │   │  CH (FINAL)    │   │  RW (DISTINCT)    │
+   └─────┬──────┘   └────────┬───────┘   └─────────┬─────────┘
+         │                   │                     │
+         └───────────────────┼─────────────────────┘
+                             ▼
+              ┌──────────────────────────────────┐
+              │  Airflow DAG:                    │
+              │  fraud_reconciliation (2 min)    │
+              └─────────────────┬────────────────┘
+                                ▼
+                      ┌──────────────────┐
+                      │  diff_and_alert  │
+                      └────────┬─────────┘
+                               ▼
+                      ┌────────────────────────┐
+                      │      Drift Alert       │
+                      │ (log + Workspace UI)   │
+                      └────────────────────────┘
+```
+
+Both flows are illustrated in full under §3 UC2 Extensions below.
 
 ### CDC Paths Comparison
 
@@ -341,6 +417,95 @@ The BFSI Fraud Detection stack demonstrates a complete data platform for real-ti
     └────────────────────────────────────────────────────────┘
 ```
 
+See **UC2 Extensions** below for the hybrid-search Metabase cards (BM25 + AIDB BERT + RRF) and the opt-in Airflow `fraud_reconciliation` DAG that ships with this use case.
+
+---
+
+### UC2 Extensions: Hybrid Search and Drift Reconciliation
+
+These two capabilities ship inside UC2 and surface as additional Metabase cards plus an opt-in Airflow workflow.
+
+**A. Hybrid Search — Lexical + Semantic with Reciprocal Rank Fusion**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            HYBRID SEARCH (UC2)                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+         User Query: "fraudulent ATM withdrawal late at night"
+                                  │
+                                  ▼
+    ┌──────────────────────────────────────────────────────────────────┐
+    │   transactions_hybrid_corpus  (materialized from OLTP rows)      │
+    └──────────────────────────────────────────────────────────────────┘
+              │                                          │
+       Lexical arm                                Semantic arm
+              │                                          │
+              ▼                                          ▼
+    ┌──────────────────┐                       ┌──────────────────┐
+    │  VectorChord-    │                       │      AIDB        │
+    │  BM25            │                       │  BERT Embedding  │
+    │  + pg-tokenizer  │                       │  via encode_text │
+    │  (PGD extension) │                       │  (per-row insert)│
+    │                  │                       │                  │
+    │  Top-N by BM25   │                       │  Top-N by cosine │
+    └────────┬─────────┘                       └────────┬─────────┘
+             │                                          │
+             └──────────────────┬───────────────────────┘
+                                │
+                                ▼
+                  ┌─────────────────────────┐
+                  │ Reciprocal Rank Fusion  │
+                  │ (in-database SQL)       │
+                  │                         │
+                  │ • Merged ranking        │
+                  │ • found_by attribution  │
+                  └────────────┬────────────┘
+                               │
+                               ▼
+                  ┌─────────────────────────┐
+                  │  Metabase Comparison    │
+                  │  cards: BM25 / BERT /   │
+                  │  Hybrid (RRF) / Rerank  │
+                  └─────────────────────────┘
+```
+
+**B. Airflow Drift Reconciliation — `fraud_reconciliation` DAG**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│            AIRFLOW DAG: fraud_reconciliation  (every 2 min)                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+   ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+   │   count_pgd     │   │ count_clickhouse│   │ count_risingwave│
+   │   (source)      │   │  (FINAL view)   │   │ (DISTINCT view) │
+   └────────┬────────┘   └────────┬────────┘   └────────┬────────┘
+            │                     │                     │
+            └──────────┬──────────┴─────────────────────┘
+                       │
+                       ▼
+              ┌────────────────────┐
+              │   diff_and_alert   │
+              │                    │
+              │ • Compute % drift  │
+              │ • Compare to       │
+              │   DRIFT_THRESHOLD  │
+              └─────────┬──────────┘
+                        │  (if exceeded)
+                        ▼
+                ┌────────────────┐
+                │  Drift Alert   │
+                │  Airflow log + │
+                │  Workspace UI  │
+                └────────────────┘
+
+   Notes:
+   • RisingWave count uses count(DISTINCT tx_id) to dedup CDC INSERT+UPDATE events.
+   • ClickHouse count uses FINAL over the ReplacingMergeTree.
+   • Drift threshold is set per deployment via DRIFT_THRESHOLD_PCT.
+```
+
 ---
 
 ### UC3: Machine Learning and Inferencing
@@ -447,11 +612,17 @@ The BFSI Fraud Detection stack demonstrates a complete data platform for real-ti
 
 ---
 
-### UC4: Agentic AI and Governance
+### UC4 / UC5 / UC6: ML Governance, GenAI Fraud Audit, AI Governance
+
+The diagrams below cover three of the README's use cases together because they share components (MLflow tracking, LangFlow agent, LLM judge). For canonical scope per use case see the README:
+
+- **UC4 — ML Governance**: MLflow experiment tracking and model registry (the "ML Governance (UC4)" block in the diagram below).
+- **UC5 — GenAI Fraud Audit**: the LangFlow agent under "AI AGENT ARCHITECTURE".
+- **UC6 — AI Governance**: LLM tracing and the LLM-judge evaluation pipeline (the "AI Governance (UC6)" block and the Evaluation Pipeline).
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    USECASE 4: AGENTIC AI & GOVERNANCE                       │
+│                  USECASES 4-6: ML GOV, GENAI AUDIT, AI GOV                  │
 └─────────────────────────────────────────────────────────────────────────────┘
 
                          AI AGENT ARCHITECTURE
@@ -565,11 +736,13 @@ The BFSI Fraud Detection stack demonstrates a complete data platform for real-ti
 
 ## Summary
 
-| Use Case        | Components                     | Key Metrics                          |
-|-----------------|--------------------------------|--------------------------------------|
-| **UC1: OLTP**   | Bank App → PGD                 | Transaction TPS, Latency             |
-| **UC2: OLAP**   | PGD → Kafka/RW/CH → Metabase   | Query latency, Dashboard refresh     |
-| **UC3: ML**     | 4 inference paths → XGBoost    | TTDF (<100ms to ~4s), Precision/Recall |
-| **UC4: GenAI**  | LangFlow → Claude + Tools      | Correctness, Groundedness, Latency   |
-| **UC5: ML Gov** | MLflow Tracking + Registry     | Model versions, Experiment history   |
-| **UC6: AI Gov** | MLflow Traces + LLM Judge      | Token usage, Evaluation scores       |
+| Use Case             | Components                     | Key Metrics                            |
+|----------------------|--------------------------------|----------------------------------------|
+| **UC1: OLTP**        | Bank App → PGD                 | Transaction TPS, Latency               |
+| **UC2: OLAP**        | PGD → Kafka/RW/CH → Metabase   | Query latency, Dashboard refresh       |
+| **UC2 Ext: Hybrid**  | AIDB BERT + VectorChord-BM25 + RRF | Recall, found_by attribution       |
+| **UC2 Ext: Drift**   | Airflow `fraud_reconciliation` DAG | Drift % vs DRIFT_THRESHOLD_PCT     |
+| **UC3: ML Fraud**    | 4 inference paths → XGBoost    | TTDF (<100ms to ~4s), Precision/Recall |
+| **UC4: ML Gov**      | MLflow Tracking + Registry     | Model versions, Experiment history     |
+| **UC5: GenAI Audit** | LangFlow → LLM + Tools         | Correctness, Groundedness, Latency     |
+| **UC6: AI Gov**      | MLflow Traces + LLM Judge      | Token usage, Evaluation scores         |

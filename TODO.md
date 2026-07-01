@@ -47,30 +47,34 @@ There are 7 issues found by InfoSec:
 
 Then, there is some feedback about the user facing docs:
 
- 8. Partner language - TODO - MED
+ 8. Partner language - DONE - MED
 
-    In the [Technology Stack](README.md#technology-stack) section, we
-    use the term "Partner" even if there is no formal partnership with
-    those organizations. Perhaps we should call them "Components"?
+    [GC] In the [Technology Stack](README.md#technology-stack)
+    section, we use the term "Partner" even if there is no formal
+    partnership with those organizations.
 
- 9. Disclaimer - TODO - MED
+    We renamed that to "Integrated Technologies".
 
-    In the [README](README.md) we call EDB Postgres® AI Blueprints a
-    "ready-to-deploy reference architecture", while in the
-    [SECURITY](SECURITY.md) file we place a disclaimer:
+ 9. Disclaimer - WIP - MED
+
+    [GC] In the [README](README.md) we call EDB Postgres® AI
+    Blueprints a "ready-to-deploy reference architecture", while in
+    the [SECURITY](SECURITY.md) file we place a disclaimer:
 
     > **This project is designed for local development and
     > proof-of-concept demonstrations only. It is NOT intended for
     > production use without additional security hardening.**
 
-    The disclaimer is clearer, but it is restricted to security. I
-    would also mention High Availability too, moving the disclaimer in
-    the toplevel README. For instance:
+    The disclaimer is clearer, but it is restricted to security.
 
     > **This project is intended for proof-of-concept demonstrations
     > only; it is NOT intended for production use, which requires
     > additional security hardening, and appropriate modifications to
     > the architecture that enable high availability procedures.**
+
+10. Updating README - WIP - MED
+
+    [RR] is currently updating the README and will push it very soon.
 
 # User Facing Documentation
 

@@ -67,6 +67,18 @@ agent:
 		echo "Agent already running on port 4000. Run 'make stop' first."; \
 	else \
 		if [ -f "$(PROJECT_ROOT)/.env" ]; then set -a; . "$(PROJECT_ROOT)/.env"; set +a; fi; \
+		if [ -z "$$AGENT_API_KEY" ]; then \
+			echo ""; \
+			echo "ERROR: AGENT_API_KEY is not set."; \
+			echo ""; \
+			echo "The agent requires AGENT_API_KEY to authenticate /api/* and /ws/* requests."; \
+			echo "Set it in .env (or your shell) before running 'make agent':"; \
+			echo ""; \
+			echo "    AGENT_API_KEY=<your-secret>     # generate with: openssl rand -hex 32"; \
+			echo ""; \
+			echo "See SECURITY.md for details."; \
+			exit 1; \
+		fi; \
 		if [ -n "$$AWS_PROFILE" ] && [ -z "$$AWS_ACCESS_KEY_ID" ]; then \
 			echo "Exporting AWS credentials from profile: $$AWS_PROFILE"; \
 			eval "$$(aws configure export-credentials --profile $$AWS_PROFILE --format env 2>/dev/null)" || \
@@ -75,15 +87,31 @@ agent:
 		export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN; \
 		cd "$(PROJECT_ROOT)/engine/agent" && nohup $(PYTHON) app.py > logs/agent.log 2>&1 & \
 		echo "$$!" > "$(PROJECT_ROOT)/engine/agent/logs/agent.pid"; \
+		AGENT_PID=$$(cat "$(PROJECT_ROOT)/engine/agent/logs/agent.pid"); \
 		for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do \
 			sleep 1; \
 			if ss -tlnp 2>/dev/null | grep -q ":4000 " || lsof -ti:4000 >/dev/null 2>&1; then \
-				echo "Agent started at http://127.0.0.1:4000 (PID: $$(cat "$(PROJECT_ROOT)/engine/agent/logs/agent.pid"))"; \
+				echo "Agent started at http://127.0.0.1:4000 (PID: $$AGENT_PID)"; \
 				echo "Logs: make logs | make logs-follow"; \
 				break; \
 			fi; \
+			if ! kill -0 $$AGENT_PID 2>/dev/null; then \
+				echo ""; \
+				echo "Agent process exited during startup. Recent log output:"; \
+				echo "----------------------------------------------------------------"; \
+				tail -n 40 "$(PROJECT_ROOT)/engine/agent/logs/agent.log"; \
+				echo "----------------------------------------------------------------"; \
+				echo "Full log: make logs"; \
+				exit 1; \
+			fi; \
 			if [ "$$i" = "30" ]; then \
-				echo "Agent failed to start. Check: make logs"; \
+				echo ""; \
+				echo "Agent did not bind port 4000 within 30s. Recent log output:"; \
+				echo "----------------------------------------------------------------"; \
+				tail -n 40 "$(PROJECT_ROOT)/engine/agent/logs/agent.log"; \
+				echo "----------------------------------------------------------------"; \
+				echo "Full log: make logs"; \
+				exit 1; \
 			fi; \
 		done; \
 	fi

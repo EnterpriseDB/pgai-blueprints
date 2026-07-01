@@ -733,7 +733,7 @@ services:
 
   # PG Airman MCP Server - Database query tool for AI agents
   pg-airman-mcp:
-    build: ../../plugins/pg-airman-mcp
+    build: ./pg-airman-mcp
     container_name: bfsi-pg-airman-mcp
     restart: unless-stopped
     ports:

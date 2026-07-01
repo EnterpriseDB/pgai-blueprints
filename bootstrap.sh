@@ -2,7 +2,7 @@
 set -e
 
 echo "==================================================="
-echo "  EDB Postgres® AI Blueprints v0.1rc9 - Bootstrap"
+echo "  EDB Postgres® AI Blueprints v0.1.0 - Bootstrap"
 echo "  Docker Compose Runtime"
 echo "==================================================="
 echo ""

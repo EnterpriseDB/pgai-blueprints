@@ -1,4 +1,4 @@
-# EDB Postgres® AI Blueprints v0.1rc8
+# EDB Postgres® AI Blueprints v0.1.0
 
 *For demonstration purposes only.*
 
@@ -16,12 +16,37 @@ This project is for demonstration purposes only.
 
 The active **BFSI Fraud Detection** stack exposes 6 progressive use cases. Each builds on the previous and is click-to-run from the UI's *Use Cases* tab, with an inline collapsible Flow panel explaining the narrative.
 
-- **OLTP** — Bank App writes transactions into EDB PGD; start a live simulator from the UI to keep TX flowing.
-- **OLAP** — Debezium CDC fans the OLTP feed into ClickHouse + RisingWave + Iceberg, viewable side-by-side in Metabase.
-- **ML Fraud Detection** — Jupyter trains a fraud model, MLflow registers it, four inference paths score the live TX stream.
-- **ML Governance** — MLflow experiment tracking + model registry over Use Case 3's runs.
-- **GenAI Fraud Audit** — LangFlow agent auditing flagged transactions, using AIDB semantic search and an Ollama LLM.
-- **AI Governance** — LLM-as-judge evaluation of Use Case 5's agent on AWS Bedrock; metrics land back in MLflow.
+- **UC1 · OLTP** — Bank App writes transactions into EDB PGD; start a live transaction simulator from the UI to keep the stream flowing.
+- **UC2 · OLAP & Streaming** — Debezium CDC fans the OLTP feed into ClickHouse, RisingWave, and Iceberg, viewable side-by-side in Metabase. Includes a hybrid-search dashboard (BM25 + AIDB BERT + Reciprocal Rank Fusion) and an Airflow DAG that reconciles row counts across surfaces and raises drift alerts.
+- **UC3 · ML Fraud Detection** — Jupyter trains a fraud model, MLflow registers it, and four inference paths (Kafka, RisingWave, ClickHouse, PGAA) score the live transaction stream in parallel.
+- **UC4 · ML Governance** — MLflow experiment tracking and model registry over UC3's runs, including parameter, metric, and artifact lineage.
+- **UC5 · GenAI Fraud Audit** — LangFlow visual agent audits flagged transactions, backed by AIDB semantic search over a rule corpus and an Ollama LLM.
+- **UC6 · AI Governance** — LLM-as-judge evaluation of UC5's agent on AWS Bedrock; results land back in MLflow alongside the ML metrics.
+
+---
+
+## Architecture at a Glance
+
+```
+ Bank App ──INSERT──► EDB PGD ──Debezium CDC──► Kafka ──┬──► ClickHouse   (OLAP)
+                          │                             ├──► RisingWave   (streaming SQL)
+                          │                             └──► Iceberg/MinIO (lake)
+                          ▼
+                        AIDB ──► Hybrid Search (BM25 + BERT + RRF)
+                          │
+              ┌───────────┴───────────┐
+              ▼                       ▼
+           ML Fraud              GenAI Audit
+   (Jupyter → MLflow →     (LangFlow agent +
+    4 inference paths)         Ollama LLM)
+              │                       │
+              └────► Airflow ◄────────┘
+                        │
+                        ▼
+                    Metabase (BI)
+```
+
+Full service topology, port map, and profile layout: [`stacks/bfsi-fraud-detection/ARCHITECTURE.md`](stacks/bfsi-fraud-detection/ARCHITECTURE.md).
 
 ---
 
@@ -40,8 +65,7 @@ Integrated technologies that power the BFSI stack:
 | LangFlow | Visual GenAI agent builder | ✓ Active |
 | Lakekeeper | Apache Iceberg REST catalog | ✓ Active |
 | Metabase | BI dashboards across the data layers | ✓ Active |
-| Airflow / Astronomer | Workflow orchestration | Planned |
-| Fivetran, DBT | Alt ingestion + transformation paths | Planned |
+| Airflow | Workflow orchestration (UC2 drift reconciliation DAG) | ✓ Active |
 
 ---
 
@@ -73,6 +97,7 @@ The path most users land on. Works on macOS, Windows (WSL2), and Linux.
 - Python 3.9+
 - Git
 - An LLM credential: Anthropic API key **or** AWS Bedrock (SSO profile / access keys)
+- **Agent API key** (`AGENT_API_KEY` in `.env`) — required. The agent refuses to start without it. Generate any strong value, for example `openssl rand -hex 32`.
 - **EDB subscription token** (`EDB_SUBSCRIPTION_TOKEN` in `.env`) — required for BFSI and any stack that pulls EDB images from `docker.enterprisedb.com`. Get it at https://www.enterprisedb.com/repos-downloads
 - For BFSI: ≥8 vCPU / 32 GiB / 100 GB allocated to Docker Desktop (Settings → Resources). Lighter stacks fit in 4/8/60.
 
@@ -80,7 +105,10 @@ The path most users land on. Works on macOS, Windows (WSL2), and Linux.
 
 ```bash
 cp .env.example .env
-# Set ANTHROPIC_API_KEY or AWS Bedrock vars (see Operating Guide → .env Configuration)
+# Edit .env and set, at minimum:
+#   AGENT_API_KEY=$(openssl rand -hex 32)        # required — agent refuses to start without it
+#   ANTHROPIC_API_KEY=...  (or AWS Bedrock vars) # see Operating Guide → .env Configuration
+#   EDB_SUBSCRIPTION_TOKEN=...                   # required for BFSI
 ```
 
 **Windows (WSL2) — corporate SSL / Netskope**
@@ -107,7 +135,7 @@ Run all commands in the WSL2 shell. Some networks use a TLS proxy (e.g. **Netsko
 
 5. Then run **`make agent`**. Order matters: Bedrock auth first, then these variables, then the tool.
 
-   When the website asks for an `API_AGENT_KEY`, enter `agent123`.
+   When the UI prompts for `AGENT_API_KEY`, enter the value you set in `.env`.
 
    If TLS errors persist, confirm the PEM matches what the browser trusts and that IT has approved the cert for API access. This is an environment-specific workaround, not a product requirement.
 
@@ -249,9 +277,13 @@ AWS_DEFAULT_REGION=us-east-1
 
 # EDB subscription (REQUIRED for stacks that pull from docker.enterprisedb.com —
 # BFSI Fraud Detection, analytics-comparison, core-banking-simulator,
-# unified-analytics-intelligence, and the edb-pgd / edb-whpg plugins).
+# and unified-analytics-intelligence).
 # Get the token at: https://www.enterprisedb.com/repos-downloads
 EDB_SUBSCRIPTION_TOKEN=
+
+# Agent API key (REQUIRED — the agent refuses to start without it).
+# Protects /api/* and /ws/* endpoints. Generate with: openssl rand -hex 32
+AGENT_API_KEY=
 
 # Northflank (only if using Target 3)
 NORTHFLANK_API_KEY=nf-...
@@ -264,7 +296,6 @@ GHCR_PREFIX=ghcr.io/<github-user>/<image-prefix>
 # Optional overrides
 # LLM_PROVIDER=anthropic | bedrock
 # PORT=4000
-# AGENT_API_KEY=...                  # protects selected HTTP endpoints if set
 # CORP_SSL_CERT=/path/to/ca.pem      # corporate TLS proxy (Netskope etc.)
 ```
 
@@ -281,6 +312,14 @@ GHCR_PREFIX=ghcr.io/<github-user>/<image-prefix>
 | `make status` | Read-only: running containers, compose projects, framework ports. |
 | `make logs` | Last 50 lines of `engine/agent/logs/agent.log`. |
 | `make logs-follow` | `tail -f` the agent log. |
+
+### UI Tabs
+
+| Tab | Purpose |
+|---|---|
+| **Industry** | Stack catalog. Pick a stack to deploy. |
+| **Use Cases** | Per-stack pipelines with click-to-run steps and a collapsible Flow panel that explains each one. |
+| **Workspace** | Live view of the running stack — embedded Metabase dashboards, app links, container logs, and a terminal into the toolbox container. |
 
 ### Repeatable Deploy Recipe
 
@@ -349,29 +388,11 @@ Industry-case placeholders that render greyed-out on the Industry tab. Defined i
 - Healthcare Patient Records
 - Energy Grid Telemetry
 
-### Vendored References (`_template` and others)
+### Archived Reference Stacks
 
-Folders under `/stacks/` that don't appear on the Industry tab today. They're reusable building blocks and copy-from-templates for new stacks.
+Older reference vendor stacks live under [`stacks/_archive/`](stacks/_archive/). They are not surfaced in the agent UI and are retained only as read-only references. **BFSI Fraud Detection is the only supported stack on this branch.**
 
-| Folder | Purpose |
-|---|---|
-| `_template` | Skeleton to copy when adding a new stack. |
-| `analytics-comparison` | ClickHouse vs RisingWave vs PGD vs WHPG side-by-side. |
-| `core-banking-simulator` | Pre-BFSI core banking demo (precursor of BFSI). |
-| `data-engineering` | Fraud-detection-style ETL pipeline (Grafana, Jupyter, Langflow). |
-| `paradedb` | BM25 + pgvector hybrid search. |
-| `pg-clickhouse` | Postgres → ClickHouse CDC (PeerDB). |
-| `real-time-analytics` | RisingWave + PG integration. |
-| `redpanda-vs-kafka-benchmark` | Kafka vs Redpanda E2E benchmark. |
-| `sovereign-data-tier` | Postgres WAL archive + base backup to MinIO. |
-| `unified-analytics-intelligence` | Metabase unified view across PGD + RisingWave. |
-| `cdc-pg-to-rw-pg` | Postgres CDC → RisingWave → Postgres. |
-| `events-api-to-rw-pg` | HTTP event API → RisingWave → Postgres. |
-| `kafka-to-rw-pg` | Kafka → RisingWave → Postgres. |
-| `webhook-to-rw-pg` | Webhook → RisingWave → Postgres. |
-| `k8s-playground` | Local k3s sandbox. |
-
-Plugins (single-service compose for ad-hoc work) live under `/plugins/`: clickhouse, grafana, jupyter, k3s, kafka, kafka-ui, langflow, minio, paradedb, postgres, redpanda, redpanda-console, risingwave.
+The `_template` folder remains at the top of `stacks/` as the starting point for new stacks.
 
 ---
 
@@ -410,8 +431,7 @@ pgai-blueprints/
         laptop.py         # Docker Desktop + Colima preflight
         northflank.py     # NF API translation
     synthdb/              # Synthetic data service (SDV), on-demand
-  stacks/                 # 16 folders (1 active on Industry tab)
-  plugins/                # 13 standalone services
+  stacks/                 # Reference stacks (BFSI Fraud Detection is the active one)
   scripts/                # clean-ports.sh, cross-runtime-clean.sh, list-stack-ports.py
   Makefile
   bootstrap.sh
@@ -424,8 +444,8 @@ pgai-blueprints/
 - [Security](SECURITY.md) — defaults, credentials, hardening
 - [CI/CD Guidelines](CI.md) — maintaining pipelines
 - [Contributing](CONTRIBUTING.md) — contributor guide
-- [Data engineering — getting started](stacks/data-engineering/GETTING_STARTED.md) — fraud-detection-style demo
-- [Data engineering — developer notes](stacks/data-engineering/README.md)
+- [BFSI Fraud Detection — stack README](stacks/bfsi-fraud-detection/README.md) — services, ports, quick start
+- [BFSI Fraud Detection — architecture](stacks/bfsi-fraud-detection/ARCHITECTURE.md) — container topology, profiles, data flow
 
 ## License
 
@@ -441,9 +461,9 @@ See [LICENSE](LICENSE) for details.
 
 ## Committers
 
-- **Pranish Kumar** - Project coordination, issue triage, and progress tracking
-- **Vibhor Kumar** - Carrying the framework forward on AWS, and LeaseWeb
-- **Maneesh Goyal** - Contributor - Data Engineering Integration
-- **Rahul Saha** - Contributor - Sovereign Data Tier
-- **Ajit Gadge** - Contributor - ParadeDB Hybrid Search
-- **Gianni Ciolli** - Contributor - Deploy on AWS with TPA, release infrastructure
+- **Pranish Kumar**
+- **Vibhor Kumar**
+- **Maneesh Goyal**
+- **Rahul Saha**
+- **Ajit Gadge**
+- **Gianni Ciolli**
