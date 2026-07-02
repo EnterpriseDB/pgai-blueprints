@@ -5,7 +5,7 @@ Auto-detects Anthropic direct API or AWS Bedrock.
 For demonstration purposes only.
 """
 
-pgai_version = "v0.1.0"
+pgai_version = "v0.1.1"
 
 import os
 import sys

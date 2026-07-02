@@ -6,7 +6,7 @@ Port 4000 (PeerDB uses 3000).
 For demonstration purposes only.
 """
 
-pgai_version = "0.1.0"
+pgai_version = "0.1.1"
 
 import os
 import sys
@@ -2476,7 +2476,7 @@ CHAT_HTML = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EDB Postgres® AI Blueprints v0.1.0</title>
+<title>EDB Postgres® AI Blueprints v0.1.1</title>
 <style>
 :root{--bg:#f5f6f8;--bg2:#fff;--bg3:#f8f9fb;--text:#1a1a2e;--text2:#333;--text3:#666;--muted:#888;--border:#e2e4e8;--border2:#eee;--accent:#4a90d9;--accent2:#3a7bc8;--header-bg:#1a1a2e;--header-text:#fff;--card-bg:#fff;--card-hover:#f0f8ff;--code-bg:#f0f2f5;--code-border:#e8eaed;--success:#28a745;--danger:#dc3545;--warning:#f0ad4e;--chat-user-bg:#e8f0fe;--chat-user-text:#1a1a2e;--chat-bot-bg:#fff;--chat-bot-text:#333;--input-bg:#fff;--input-border:#e2e4e8;--shadow:0 1px 3px rgba(0,0,0,.08)}
 [data-theme="dark"]{--bg:#1e1e1e;--bg2:#252526;--bg3:#2d2d2d;--text:#d4d4d4;--text2:#cccccc;--text3:#969696;--muted:#858585;--border:#3e3e3e;--border2:#333333;--accent:#569cd6;--accent2:#9cdcfe;--header-bg:#1a1a1a;--header-text:#d4d4d4;--card-bg:#2d2d2d;--card-hover:#333333;--code-bg:#1e1e1e;--code-border:#3e3e3e;--success:#6a9955;--danger:#f14c4c;--warning:#cca700;--chat-user-bg:#264f78;--chat-user-text:#ffffff;--chat-bot-bg:#2d2d2d;--chat-bot-text:#d4d4d4;--input-bg:#3c3c3c;--input-border:#3e3e3e;--shadow:0 2px 6px rgba(0,0,0,.35)}
@@ -3662,7 +3662,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <!-- Header -->
 <div class="hdr">
   <div class="hdr-left">
-    <h1>EDB Postgres® AI Blueprints</h1><span class="ver">v0.1.0</span>
+    <h1>EDB Postgres® AI Blueprints</h1><span class="ver">v0.1.1</span>
     <div class="running-bar" id="runningBar" style="display:none">
       <span class="dot"></span><span id="runningNames"></span><span class="slot" id="slotInfo"></span>
     </div>
@@ -6195,12 +6195,12 @@ async function loadUI(){
     // Welcome message
     if(!window._welcomeShown){
       window._welcomeShown=true;
-      addMsg('assistant','Welcome to **EDB Postgres® AI Blueprints v0.1.0**\n\nPick an industry case to deploy, then switch to Workspace to run demo workflows.');
+      addMsg('assistant','Welcome to **EDB Postgres® AI Blueprints v0.1.1**\n\nPick an industry case to deploy, then switch to Workspace to run demo workflows.');
     }
     refreshRunning();
   }catch(e){
     document.getElementById('tab-stacks').innerHTML='<p class="mon-empty">Could not load stacks</p>';
-    addMsg('assistant','Welcome to EDB Postgres® AI Blueprints vv0.1.0. Type "deploy real-time-analytics" to get started.');
+    addMsg('assistant','Welcome to EDB Postgres® AI Blueprints vv0.1.1. Type "deploy real-time-analytics" to get started.');
   }
 }
 
